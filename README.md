@@ -36,10 +36,13 @@ the first half of the postcode (like SW3) and a distance rounded to the nearest 
    then fill in **Authentication > Emails > SMTP settings** with Resend's SMTP details.
 5. Open **Project Settings > API** and copy the **Project URL** and the **anon public** key.
 
+The app already contains this project's URL and publishable key (`src/lib/supabase.ts`).
+To use a different Supabase project, put its values in a `.env` file.
+
 ### 2. Run it on your computer (optional)
 
 ```bash
-cp .env.example .env      # then paste the two values from step 1.5 into .env
+cp .env.example .env      # optional: only to point at a different Supabase project
 npm install
 npm run web               # opens the app in your browser
 ```
@@ -48,8 +51,8 @@ npm run web               # opens the app in your browser
 
 1. Sign up at [vercel.com](https://vercel.com) with your GitHub account.
 2. **Add New > Project**, import `homely-app`.
-3. Under **Environment Variables** add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-4. Click **Deploy**. Vercel gives you a link like `homely-app.vercel.app`. Every change pushed to GitHub updates it.
+3. Click **Deploy**. Vercel gives you a link like `homely-app.vercel.app`. Every change pushed to GitHub updates it.
+4. In Supabase, **Authentication > URL Configuration**: set **Site URL** to that link, so sign-in emails link back to the app.
 5. Friends open the link on their phone and choose **Add to Home Screen**.
 
 ### 4. Verify a seller's ID (pilot)

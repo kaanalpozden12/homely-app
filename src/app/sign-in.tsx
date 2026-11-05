@@ -19,7 +19,11 @@ export default function SignIn() {
     if (!/^\S+@\S+\.\S+$/.test(e)) return setError('Enter a valid email address.');
     setBusy(true);
     setError('');
-    const { error } = await supabase.auth.signInWithOtp({ email: e, options: { shouldCreateUser: true } });
+    const { error } = await supabase.auth.signInWithOtp({ email: e, options: {
+        shouldCreateUser: true,
+        // On the web the email's sign-in link also works and brings people back here.
+        emailRedirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
+      } });
     setBusy(false);
     if (error) return setError(error.message);
     setSent(true);
@@ -53,7 +57,7 @@ export default function SignIn() {
             <>
               <View style={[s.note, { marginBottom: 14 }]}>
                 <Icon name="email-check-outline" color={C.accent} />
-                <Text style={{ flex: 1, color: C.muted }}>We sent a 6-digit code to <Text style={{ fontWeight: '700', color: C.ink }}>{email}</Text>.</Text>
+                <Text style={{ flex: 1, color: C.muted }}>We sent an email to <Text style={{ fontWeight: '700', color: C.ink }}>{email}</Text>. Tap the link in it, or type the code here.</Text>
               </View>
               <Field label="Code" value={code} onChangeText={setCode} placeholder="123456" keyboardType="number-pad"
                 autoComplete="one-time-code" maxLength={8} onSubmitEditing={verify} error={error} />
