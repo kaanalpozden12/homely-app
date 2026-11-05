@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Homely",
+    "slug": "homely",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "homely",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "uk.homely.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Homely needs your photos so you can add pictures to your listings."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#DCEFE9",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "uk.homely.app"
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Homely",
+      "shortName": "Homely",
+      "themeColor": "#0E7C66",
+      "backgroundColor": "#F5F7F6"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F7F6",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Homely needs your photos so you can add pictures to your listings."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
