@@ -87,6 +87,21 @@ returns boolean language sql stable security definer set search_path = public as
     where (blocker_id = a and blocked_id = b) or (blocker_id = b and blocked_id = a));
 $$;
 
+-- ---------- Table access ----------
+-- Newer Supabase projects do not give the app access to new tables automatically, so it is listed here.
+-- Row level security (below) then limits which rows each person can see or change.
+grant usage on schema public to anon, authenticated;
+revoke all on public.profiles, public.profile_contacts, public.listings, public.conversations,
+  public.messages, public.blocks, public.reports from anon;
+grant select on public.profiles to authenticated;
+grant select, insert, update, delete on public.profile_contacts to authenticated;
+grant insert, update, delete on public.listings to authenticated;
+grant select, insert on public.conversations to authenticated;
+grant select, insert on public.messages to authenticated;
+grant select, insert, update, delete on public.blocks to authenticated;
+grant insert on public.reports to authenticated;
+grant usage on all sequences in schema public to authenticated;
+
 -- ---------- Row level security ----------
 
 alter table public.profiles enable row level security;
