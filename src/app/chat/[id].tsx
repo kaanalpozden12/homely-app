@@ -85,7 +85,7 @@ export default function Chat() {
         {chat.listing && (
           <Pressable onPress={() => router.push(`/item/${chat.listing_id}`)}
             style={{ flexDirection: 'row', gap: 10, alignItems: 'center', padding: 8, paddingHorizontal: 12, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.line }}>
-            <Photo listing={chat.listing} style={{ width: 40, height: 40 }} rounded={8} />
+            <Photo listing={chat.listing} style={{ width: 40, height: 40 }} rounded={8} tag={false} />
             <View style={{ flex: 1 }}>
               <Text style={s.title} numberOfLines={1}>{chat.listing.title}</Text>
               <Text style={s.meta}>{price(chat.listing.price)} · Pickup only{chat.listing.status === 'sold' ? ' · Sold' : ''}</Text>

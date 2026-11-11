@@ -8,7 +8,7 @@
     "scheme": "homely",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "uk.homely.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Homely needs your photos so you can add pictures to your listings."
@@ -30,7 +30,8 @@
       "name": "Homely",
       "shortName": "Homely",
       "themeColor": "#0E7C66",
-      "backgroundColor": "#F5F7F6"
+      "backgroundColor": "#F5F7F6",
+      "description": "Buy and sell second-hand furniture and household items in London, from ID-checked neighbours."
     },
     "plugins": [
       "expo-router",

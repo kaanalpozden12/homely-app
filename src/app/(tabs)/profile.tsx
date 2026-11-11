@@ -69,7 +69,8 @@ export default function Profile() {
           <Text style={[s.hint, { marginTop: 8 }]}>Phone and Instagram are only shared when you tap Share contact in a chat.</Text>
           <Label>Account</Label>
           <View style={s.box}>
-            <Link icon="file-document-outline" label="Terms and privacy" onPress={() => router.push('/terms')} />
+            <Link icon="file-document-outline" label="Terms of use" onPress={() => router.push('/terms')} />
+            <Link icon="shield-lock-outline" label="Privacy policy" onPress={() => router.push('/privacy')} />
             <Link icon="logout" label="Sign out" onPress={() => supabase.auth.signOut()} />
             <Link icon="delete-outline" label="Delete my account" danger onPress={del} last />
           </View>

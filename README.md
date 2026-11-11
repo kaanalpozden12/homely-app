@@ -13,7 +13,7 @@ Built with [Expo](https://expo.dev) (one codebase for web, Android and iPhone) a
 - **Home**: listings near your postcode, filtered by seller language and category, plus a Free filter.
 - **Search**: keyword, postcode, distance (1, 2, 3, 5 miles or any), language, category, sort.
 - **Sell**: up to 5 photos, title, price, category, condition, description, hygiene checklist, pickup postcode.
-  Only ID-verified sellers can post (see `REQUIRE_ID_TO_SELL` in `src/lib/constants.ts`).
+  Only ID-verified sellers can post (switch in the `app_settings` table).
 - **Item page**: photos, details, rounded distance, seller, message button, report.
 - **Chat**: live messages, quick replies, Share contact (phone and/or Instagram, only when you choose).
 - **Safety**: report listings or people, block people, delete your account, terms and privacy page.
@@ -55,15 +55,50 @@ npm run web               # opens the app in your browser
 4. In Supabase, **Authentication > URL Configuration**: set **Site URL** to that link, so sign-in emails link back to the app.
 5. Friends open the link on their phone and choose **Add to Home Screen**.
 
-### 4. Verify a seller's ID (pilot)
+### 4. Update the database after an app update
 
-After a short video call where you see the person's photo ID, open Supabase **Table Editor > profiles**,
-find their row and tick **id_verified**. They can then post listings. Reports from users appear in the
-**reports** table.
+Whenever `supabase/schema.sql` changes, open **SQL Editor > New query**, paste the whole file and click **Run**.
+It is safe to run again: it keeps all users, listings and chats.
+
+## Running Homely day to day (all in Supabase > Table Editor)
+
+| Task | Where |
+| --- | --- |
+| ID checks to do | **admin_id_check_requests** lists sellers who asked, with email, phone and Instagram. After the video call, open **profiles**, find the person and tick **id_verified**. |
+| Reports | **admin_open_reports**. A listing reported by 3 different people is hidden automatically. To hide a listing yourself tick **listings.hidden**; to un-hide, untick it. When done, set the report's **status** to `resolved` in **reports**. |
+| Ban someone | **profiles**: tick **banned**. Their listings disappear and they can no longer post, message or reserve. |
+| Let anyone sell without an ID check | **app_settings**: untick **require_id_to_sell**. |
+| Commission earned | **admin_commission_by_month**, or every reservation in **transactions**. |
+
+## The commission (reservation fee)
+
+Buyers tap **Reserve** on an item. The item is held for them and the seller is told in the chat. The buyer pays the item
+price to the seller in person, and the seller taps **Mark as collected**. Every reservation is saved in the **transactions**
+table with the commission charged.
+
+- The fee is set in **app_settings > commission_pence**: `0` = free (launch), `150` = £1.50. No app update is needed.
+- Fee refunded automatically if the seller cancels. Not refunded if the buyer cancels.
+- A card payment page left unpaid for 30 minutes releases the item.
+
+### Before setting the fee above 0 (one-time Stripe setup)
+
+1. Create a [Stripe](https://dashboard.stripe.com/register) account (UK, individual / sole trader is fine) and finish its identity and bank checks.
+2. Stripe > **Developers > API keys**: copy the **Secret key**.
+3. Stripe > **Developers > Webhooks > Add endpoint**: URL `https://homely-london.vercel.app/api/stripe-webhook`, events
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`. Copy the **Signing secret**.
+4. Supabase > **Project Settings > API keys**: copy the **secret** (service_role) key. Never share it or put it in the app.
+5. Vercel > homely project > **Settings > Environment Variables**, add `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
+   `SUPABASE_SECRET_KEY`, then **Redeploy**.
+6. Test once with Stripe's test keys and card `4242 4242 4242 4242`, then switch to the live keys.
+
+If an automatic refund fails, **transactions.refund_status** shows `failed`: refund it in the Stripe dashboard and set it to `refunded`.
 
 ## For developers
 
 - Screens live in `src/app` (Expo Router). Shared pieces in `src/components`, logic in `src/lib`.
 - Listings are read through the `find_listings` database function so locations stay private.
+  Pickup points are snapped to a ~550 m grid when saved.
+- Reservations go through database functions (`reserve_listing`, `complete_transaction`, `cancel_transaction`).
+  The small payment server for card fees is in `api/` (Vercel Functions, Stripe Checkout + webhook).
 - Checks: `npm run typecheck` and `npx expo lint`.
 - App store builds later: `npx eas-cli@latest build` (see AGENTS.md).
