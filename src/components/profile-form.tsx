@@ -12,7 +12,11 @@ import { C } from '@/lib/theme';
 export function ProfileForm({ isNew }: { isNew: boolean }) {
   const { session, profile, refreshProfile } = useAuth();
   const uid = session!.user.id;
-  const [name, setName] = useState(profile?.name ?? '');
+  // People who sign in with Google already have a name; use their first name to start with.
+  const meta = session!.user.user_metadata ?? {};
+  const [name, setName] = useState<string>(
+    profile?.name ?? (meta.given_name || String(meta.full_name || meta.name || '').split(' ')[0] || '').slice(0, 40),
+  );
   const [area, setArea] = useState(profile?.area ?? '');
   const [langs, setLangs] = useState<string[]>(profile?.languages ?? []);
   const [phone, setPhone] = useState('');
@@ -35,7 +39,7 @@ export function ProfileForm({ isNew }: { isNew: boolean }) {
   const save = async () => {
     const n = name.trim();
     if (!n) return setError('Add your first name.');
-    if (!langs.length) return setError('Pick at least one language you speak.');
+    if (!langs.length) return setError('Pick at least one language.');
     if (!agree) return setError('Please agree to the terms to continue.');
     setBusy(true);
     setError('');
@@ -59,11 +63,11 @@ export function ProfileForm({ isNew }: { isNew: boolean }) {
       <Field label="First name" value={name} onChangeText={setName} placeholder="e.g. Kaan" maxLength={40} autoComplete="given-name" />
       <Field label="Neighbourhood" value={area} onChangeText={setArea} placeholder="e.g. Chelsea" maxLength={40}
         hint="Shown on your profile. Never your street or address." />
-      <Label style={{ marginTop: 0 }}>Languages I speak</Label>
+      <Label style={{ marginTop: 0 }}>Languages I want to buy and sell in</Label>
       <Chips wrap>
         {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={langs.includes(l)} onPress={() => toggle(l)} />)}
       </Chips>
-      <Text style={[s.hint, { marginTop: 8 }]}>Buyers can filter listings by the languages sellers speak.</Text>
+      <Text style={[s.hint, { marginTop: 8 }]}>Your feed shows items from people who speak these languages, and people looking for these languages can find your items. You can change it any time.</Text>
       <Label>Contact details (optional)</Label>
       <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="07700 900000" keyboardType="phone-pad" autoComplete="tel" maxLength={30} />
       <Field label="Instagram" value={insta} onChangeText={setInsta} placeholder="@yourname" autoCapitalize="none" maxLength={40}

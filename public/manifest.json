@@ -1,7 +1,7 @@
 {
   "name": "Homely",
   "short_name": "Homely",
-  "description": "Second-hand furniture and home items from ID-checked neighbours in London.",
+  "description": "Second-hand furniture and home items from neighbours in London who speak your language.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

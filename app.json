@@ -31,7 +31,7 @@
       "shortName": "Homely",
       "themeColor": "#0E7C66",
       "backgroundColor": "#F5F7F6",
-      "description": "Buy and sell second-hand furniture and household items in London, from ID-checked neighbours."
+      "description": "Buy and sell second-hand furniture and household items in London, from neighbours who speak your language."
     },
     "plugins": [
       "expo-router",

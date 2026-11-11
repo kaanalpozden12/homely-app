@@ -47,10 +47,9 @@ export default function Profile() {
           <Text style={{ fontSize: 24, fontWeight: '800', color: C.ink, marginTop: 6 }}>{profile.name}</Text>
           <Text style={s.meta}>{profile.area ? `${profile.area} · ` : ''}Joined {monthYear(profile.created_at)}</Text>
           <Verified on={profile.id_verified} />
-          {!profile.id_verified && <Text style={[s.hint, { textAlign: 'center', maxWidth: 300 }]}>We check every seller's ID once, on a short video call, before they can post.</Text>}
         </View>
         <View style={s.pad}>
-          <Label>Languages I speak</Label>
+          <Label>My languages</Label>
           <Chips wrap>{profile.languages.map((l) => <Chip key={l} label={l} sub={langCode(l)} />)}</Chips>
           <Label>My listings</Label>
         </View>

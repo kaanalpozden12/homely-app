@@ -112,12 +112,7 @@ export const Verified = ({ on }: { on: boolean }) =>
       <Icon name="shield-check" size={14} color={C.verify} />
       <Text style={{ color: C.verify, fontWeight: '700', fontSize: 12.5 }}>ID verified</Text>
     </View>
-  ) : (
-    <View style={[s.verified, { backgroundColor: C.bg, borderWidth: 1, borderColor: C.line }]}>
-      <Icon name="shield-outline" size={14} color={C.muted} />
-      <Text style={{ color: C.muted, fontWeight: '700', fontSize: 12.5 }}>ID not checked yet</Text>
-    </View>
-  );
+  ) : null;
 
 export const LangTags = ({ langs }: { langs: string[] }) => (
   <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>

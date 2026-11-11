@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 /** Settings the admin can change in Supabase (Table Editor > app_settings) without a new release. */
 export type AppSettings = { commission_pence: number; require_id_to_sell: boolean };
 
-const DEFAULTS: AppSettings = { commission_pence: 0, require_id_to_sell: true };
+const DEFAULTS: AppSettings = { commission_pence: 0, require_id_to_sell: false };
 let cache: AppSettings | null = null;
 
 export async function loadSettings(): Promise<AppSettings> {

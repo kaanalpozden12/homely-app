@@ -107,7 +107,7 @@ create index if not exists reports_listing on public.reports (listing_id);
 create table if not exists public.app_settings (
   id integer primary key default 1 check (id = 1),
   commission_pence integer not null default 0 check (commission_pence between 0 and 10000), -- 150 = £1.50, 0 = free
-  require_id_to_sell boolean not null default true,
+  require_id_to_sell boolean not null default false,  -- true = only ID-checked people can post
   updated_at timestamptz not null default now()
 );
 insert into public.app_settings (id) values (1) on conflict (id) do nothing;
@@ -158,7 +158,7 @@ $$;
 create or replace function public.can_sell(u uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles p where p.id = u and not p.banned
-    and (p.id_verified or not coalesce((select require_id_to_sell from app_settings where id = 1), true)));
+    and (p.id_verified or not coalesce((select require_id_to_sell from app_settings where id = 1), false)));
 $$;
 
 -- ---------- Table access ----------

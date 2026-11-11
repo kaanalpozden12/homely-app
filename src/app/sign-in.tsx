@@ -15,6 +15,18 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // Google blocks its sign-in inside the Instagram, Facebook and TikTok in-app browsers.
+  const inAppBrowser = Platform.OS === 'web' && /Instagram|FBAN|FBAV|FB_IAB|TikTok|musical_ly|Bytedance/i.test(navigator.userAgent);
+
+  const google = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } },
+    });
+    if (error) setError(/not enabled|provider/i.test(error.message) ? 'Google sign-in is not switched on yet. Use your email for now.' : friendly(error));
+  };
+
   const sendCode = async () => {
     const e = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(e)) return setError('Enter a valid email address.');
@@ -53,8 +65,28 @@ export default function SignIn() {
             home<Text style={{ color: C.accent }}>ly</Text>
           </Text>
           <Text style={[s.p, { color: C.muted, marginBottom: 24 }]}>
-            Second-hand furniture and household items from ID-verified neighbours. Pick up in person, pay in person.
+            Second-hand furniture and household items from neighbours who speak your language. Pick up in person, pay in person.
           </Text>
+          {!sent && Platform.OS === 'web' ? (
+            inAppBrowser ? (
+              <View style={[s.note, { marginBottom: 14 }]}>
+                <Icon name="open-in-new" color={C.accent} />
+                <Text style={{ flex: 1, color: C.muted }}>
+                  To sign in with Google, open Homely in your phone's browser: tap <Text style={{ fontWeight: '700', color: C.ink }}>•••</Text> at
+                  the top and choose <Text style={{ fontWeight: '700', color: C.ink }}>Open in browser</Text>. Or use your email below.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Button title="Continue with Google" kind="ghost" icon="google" onPress={google} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 14 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
+                  <Text style={s.meta}>or use your email</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
+                </View>
+              </>
+            )
+          ) : null}
           {!sent ? (
             <>
               <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com"

@@ -13,7 +13,7 @@ Built with [Expo](https://expo.dev) (one codebase for web, Android and iPhone) a
 - **Home**: listings near your postcode, filtered by seller language and category, plus a Free filter.
 - **Search**: keyword, postcode, distance (1, 2, 3, 5 miles or any), language, category, sort.
 - **Sell**: up to 5 photos, title, price, category, condition, description, hygiene checklist, pickup postcode.
-  Only ID-verified sellers can post (switch in the `app_settings` table).
+  Anyone can post. To require an ID check before posting, tick `require_id_to_sell` in the `app_settings` table.
 - **Item page**: photos, details, rounded distance, seller, message button, report.
 - **Chat**: live messages, quick replies, Share contact (phone and/or Instagram, only when you choose).
 - **Safety**: report listings or people, block people, delete your account, terms and privacy page.
@@ -60,6 +60,16 @@ npm run web               # opens the app in your browser
 Whenever `supabase/schema.sql` changes, open **SQL Editor > New query**, paste the whole file and click **Run**.
 It is safe to run again: it keeps all users, listings and chats.
 
+### 5. Google sign-in (one-time)
+
+1. [Google Cloud Console](https://console.cloud.google.com) > new project "Homely" > **APIs & Services > OAuth consent screen**:
+   External, app name Homely, your email, then **Publish app**.
+2. **Credentials > Create credentials > OAuth client ID**: type **Web application**. Under **Authorized redirect URIs** add
+   `https://onukvcqeocqfvyojodzy.supabase.co/auth/v1/callback`. Copy the **Client ID** and **Client secret**.
+3. Supabase > **Authentication > Sign In / Providers > Google**: switch on, paste both, **Save**.
+
+Until this is done, the "Continue with Google" button shows a message asking people to use their email.
+
 ## Running Homely day to day (all in Supabase > Table Editor)
 
 | Task | Where |
@@ -67,7 +77,7 @@ It is safe to run again: it keeps all users, listings and chats.
 | ID checks to do | **admin_id_check_requests** lists sellers who asked, with email, phone and Instagram. After the video call, open **profiles**, find the person and tick **id_verified**. |
 | Reports | **admin_open_reports**. A listing reported by 3 different people is hidden automatically. To hide a listing yourself tick **listings.hidden**; to un-hide, untick it. When done, set the report's **status** to `resolved` in **reports**. |
 | Ban someone | **profiles**: tick **banned**. Their listings disappear and they can no longer post, message or reserve. |
-| Let anyone sell without an ID check | **app_settings**: untick **require_id_to_sell**. |
+| Require an ID check before selling (off by default) | **app_settings**: tick **require_id_to_sell**. Give trusted sellers an "ID verified" badge by ticking **profiles.id_verified**. |
 | Commission earned | **admin_commission_by_month**, or every reservation in **transactions**. |
 
 ## The commission (reservation fee)
