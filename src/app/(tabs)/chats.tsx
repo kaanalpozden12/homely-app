@@ -26,8 +26,8 @@ export default function Chats() {
       const m: Record<string, string> = {};
       for (const r of data ?? []) {
         if (m[r.conversation_id]) continue;
-        const text = r.kind === 'contact' ? 'Contact details shared' : r.body;
-        m[r.conversation_id] = (r.sender_id === me ? 'You: ' : '') + text;
+        if (r.kind === 'system') m[r.conversation_id] = r.body;
+        else m[r.conversation_id] = (r.sender_id === me ? 'You: ' : '') + (r.kind === 'contact' ? 'Contact details shared' : r.body);
       }
       setLast(m);
     }

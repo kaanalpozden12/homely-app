@@ -1,6 +1,9 @@
-import { PHOTO_BUCKET, supabase } from './supabase';
+import { Platform } from 'react-native';
+
+import { readPhoto } from './image';
 import type { Filters } from './location';
-import type { Listing } from './types';
+import { PHOTO_BUCKET, supabase } from './supabase';
+import type { Listing, Transaction } from './types';
 
 export async function findListings(
   f: Pick<Filters, 'lat' | 'lng'> & Partial<Filters> & { query?: string; seller?: string; id?: string; includeSold?: boolean },
@@ -40,11 +43,11 @@ export async function openConversation(listing: Listing, me: string): Promise<st
 }
 
 /** Uploads a picked photo and returns its public URL. */
-export async function uploadPhoto(uri: string, userId: string, mime = 'image/jpeg'): Promise<string> {
-  const body = await (await fetch(uri)).arrayBuffer();
+export async function uploadPhoto(uri: string, userId: string, picked = 'image/jpeg'): Promise<string> {
+  const { body, mime } = await readPhoto(uri, picked);
   const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, body, { contentType: mime });
+  const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, body, { contentType: mime, cacheControl: '31536000' });
   if (error) throw error;
   return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
 }
@@ -64,10 +67,71 @@ export async function block(me: string, other: string) {
   if (error) throw error;
 }
 
+export async function removePhotos(urls: string[]) {
+  const paths = urls.map(photoPath).filter(Boolean);
+  if (paths.length) await supabase.storage.from(PHOTO_BUCKET).remove(paths);
+}
+
 export async function deleteMyAccount(me: string) {
   const { data: files } = await supabase.storage.from(PHOTO_BUCKET).list(me, { limit: 1000 });
   if (files?.length) await supabase.storage.from(PHOTO_BUCKET).remove(files.map((f) => `${me}/${f.name}`));
   const { error } = await supabase.rpc('delete_my_account');
   if (error) throw error;
   await supabase.auth.signOut();
+}
+
+// ---------- Reservations ----------
+
+/** The open reservation (or card payment in progress) for an item, if the signed-in user is the buyer or seller. */
+export async function openTransaction(listingId: string): Promise<Transaction | null> {
+  const { data } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('listing_id', listingId)
+    .in('status', ['awaiting_payment', 'reserved'])
+    .maybeSingle();
+  return (data as Transaction) ?? null;
+}
+
+export async function reserve(listingId: string): Promise<Transaction> {
+  const { data, error } = await supabase.rpc('reserve_listing', { p_listing: listingId });
+  if (error) throw error;
+  return data as Transaction;
+}
+
+export async function completeTransaction(id: string): Promise<Transaction> {
+  const { data, error } = await supabase.rpc('complete_transaction', { p_tx: id });
+  if (error) throw error;
+  return data as Transaction;
+}
+
+export async function cancelTransaction(id: string): Promise<Transaction> {
+  const { data, error } = await supabase.rpc('cancel_transaction', { p_tx: id });
+  if (error) throw error;
+  const t = data as Transaction;
+  // Ask the payment server to send the fee back now; if that fails it is retried from the admin side.
+  if (t.refund_status === 'pending') await callPaymentServer('refund', { transaction_id: t.id }).catch(() => {});
+  return t;
+}
+
+/** Starts card payment of the Homely fee and returns the Stripe page to open. */
+export async function startCheckout(transactionId: string): Promise<string> {
+  const { url } = await callPaymentServer('checkout', { transaction_id: transactionId });
+  return url as string;
+}
+
+/** Where the web app is served from. The phone apps talk to the same server. */
+const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://homely-london.vercel.app';
+
+async function callPaymentServer(path: string, body: object): Promise<Record<string, unknown>> {
+  const { data } = await supabase.auth.getSession();
+  const base = Platform.OS === 'web' ? window.location.origin : SITE;
+  const r = await fetch(`${base}/api/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
+    body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Card payments are not available right now. Please try again later.');
+  return j;
 }

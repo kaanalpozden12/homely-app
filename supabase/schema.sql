@@ -15,6 +15,8 @@ create table if not exists public.profiles (
 );
 -- Set by an admin (Table Editor > profiles) to stop someone posting, messaging or reserving.
 alter table public.profiles add column if not exists banned boolean not null default false;
+-- When the person tapped "Request ID check" on the Sell screen.
+alter table public.profiles add column if not exists id_check_requested_at timestamptz;
 
 -- Phone and Instagram are private: only the owner can read them.
 -- They reach another person only when the owner taps "Share contact" in a chat.
@@ -625,6 +627,14 @@ end $$;
 revoke execute on function public.delete_my_account from anon;
 grant execute on function public.delete_my_account to authenticated;
 
+-- Seller asks for their one-time ID check. Appears in admin_id_check_requests.
+create or replace function public.request_id_check()
+returns void language sql security definer set search_path = public as $$
+  update profiles set id_check_requested_at = now() where id = auth.uid() and not id_verified;
+$$;
+revoke execute on function public.request_id_check from public, anon;
+grant execute on function public.request_id_check to authenticated;
+
 -- Internal helpers are not callable from the app.
 revoke execute on function public.is_blocked_between, public.is_active_user, public.can_sell from anon;
 
@@ -651,7 +661,16 @@ create or replace view public.admin_commission_by_month as
   from transactions
   group by 1 order by 1 desc;
 
-revoke all on public.admin_open_reports, public.admin_commission_by_month from anon, authenticated;
+create or replace view public.admin_id_check_requests as
+  select p.id, p.name, u.email, c.phone, c.instagram, p.area, p.languages, p.id_check_requested_at
+  from profiles p
+  join auth.users u on u.id = p.id
+  left join profile_contacts c on c.id = p.id
+  where p.id_check_requested_at is not null and not p.id_verified and not p.banned
+  order by p.id_check_requested_at;
+
+revoke all on public.admin_open_reports, public.admin_commission_by_month, public.admin_id_check_requests
+  from anon, authenticated;
 
 -- ---------- Live chat ----------
 do $$ begin

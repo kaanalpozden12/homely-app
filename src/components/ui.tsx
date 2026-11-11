@@ -137,6 +137,7 @@ export function Photo({ listing, style, rounded = 14 }: { listing: Pick<Listing,
         <Icon name={categoryIcon(listing.category)} size={44} color={C.accent} />
       )}
       {listing.status === 'sold' && <Text style={s.soldTag}>Sold</Text>}
+      {listing.status === 'reserved' && <Text style={[s.soldTag, { backgroundColor: C.gold }]}>Reserved</Text>}
     </View>
   );
 }
