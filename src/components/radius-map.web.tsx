@@ -19,7 +19,7 @@ const PREVIEW_MILES = 3; // where the handle sits while "Any distance" is chosen
 const CSS = `
 .homely-map { background: ${C.sunken}; font-family: inherit; }
 .homely-map .leaflet-tile-pane { filter: saturate(0.6) brightness(1.03) contrast(0.96); }
-.homely-map .leaflet-control-attribution { font-size: 10px; background: rgba(255,255,255,0.8); border-top-left-radius: 6px; }
+.homely-map .leaflet-control-attribution { font: 10px/1.4 system-ui, sans-serif; background: rgba(255,255,255,0.8); border-top-left-radius: 6px; }
 .homely-handle { touch-action: none; cursor: grab; }
 .homely-handle:active { cursor: grabbing; }
 .homely-handle > div { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2.5px solid ${C.accent};
