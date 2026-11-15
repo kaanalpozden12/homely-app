@@ -8,7 +8,7 @@ export type ChatSummary = {
   buyer_read_at: string;
   seller_read_at: string;
   last_message_at: string;
-  listing: { title: string; price: number; photos: string[]; category: string; status: 'active' | 'sold' } | null;
+  listing: { title: string; price: number; photos: string[]; category: string; status: 'active' | 'reserved' | 'sold' } | null;
   buyer: { name: string; languages: string[]; id_verified: boolean } | null;
   seller: { name: string; languages: string[]; id_verified: boolean } | null;
 };

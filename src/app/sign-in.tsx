@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TermsLink } from '@/components/terms-modal';
 import { Button, Field, Icon, s } from '@/components/ui';
+import { friendly } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
 
@@ -13,6 +14,18 @@ export default function SignIn() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  // Google blocks its sign-in inside the Instagram, Facebook and TikTok in-app browsers.
+  const inAppBrowser = Platform.OS === 'web' && /Instagram|FBAN|FBAV|FB_IAB|TikTok|musical_ly|Bytedance/i.test(navigator.userAgent);
+
+  const google = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } },
+    });
+    if (error) setError(/not enabled|provider/i.test(error.message) ? 'Google sign-in is not switched on yet. Use your email for now.' : friendly(error));
+  };
 
   const sendCode = async () => {
     const e = email.trim().toLowerCase();
@@ -25,16 +38,23 @@ export default function SignIn() {
         emailRedirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
       } });
     setBusy(false);
-    if (error) return setError(error.message);
+    if (error) {
+      return setError(/rate limit|security purposes|seconds/i.test(error.message)
+        ? 'Please wait a minute before asking for another code.'
+        : friendly(error, 'We could not send the email. Check the address and try again.'));
+    }
     setSent(true);
+    setCode('');
   };
 
   const verify = async () => {
     setBusy(true);
     setError('');
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.replace(/\D/g, ''), type: 'email' });
     setBusy(false);
-    if (error) setError('That code did not work. Check the latest email, or send a new code.');
+    if (error) {
+      setError(/fetch|network/i.test(error.message) ? friendly(error) : 'That code did not work. Use the code from the newest email, or send a new one.');
+    }
   };
 
   return (
@@ -45,8 +65,28 @@ export default function SignIn() {
             home<Text style={{ color: C.accent }}>ly</Text>
           </Text>
           <Text style={[s.p, { color: C.muted, marginBottom: 24 }]}>
-            Second-hand furniture and household items from ID-verified neighbours. Pick up in person, pay in person.
+            Second-hand furniture and household items from neighbours who speak your language. Pick up in person, pay in person.
           </Text>
+          {!sent && Platform.OS === 'web' ? (
+            inAppBrowser ? (
+              <View style={[s.note, { marginBottom: 14 }]}>
+                <Icon name="open-in-new" color={C.accent} />
+                <Text style={{ flex: 1, color: C.muted }}>
+                  To sign in with Google, open Homely in your phone's browser: tap <Text style={{ fontWeight: '700', color: C.ink }}>•••</Text> at
+                  the top and choose <Text style={{ fontWeight: '700', color: C.ink }}>Open in browser</Text>. Or use your email below.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Button title="Continue with Google" kind="ghost" icon="google" onPress={google} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 14 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
+                  <Text style={s.meta}>or use your email</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
+                </View>
+              </>
+            )
+          ) : null}
           {!sent ? (
             <>
               <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com"
@@ -57,12 +97,15 @@ export default function SignIn() {
             <>
               <View style={[s.note, { marginBottom: 14 }]}>
                 <Icon name="email-check-outline" color={C.accent} />
-                <Text style={{ flex: 1, color: C.muted }}>We sent an email to <Text style={{ fontWeight: '700', color: C.ink }}>{email}</Text>. Tap the link in it, or type the code here.</Text>
+                <Text style={{ flex: 1, color: C.muted }}>We sent an email to <Text style={{ fontWeight: '700', color: C.ink }}>{email}</Text>. Type the 6-digit code here. Can't see it? Check your spam or junk folder.</Text>
               </View>
               <Field label="Code" value={code} onChangeText={setCode} placeholder="123456" keyboardType="number-pad"
                 autoComplete="one-time-code" maxLength={8} onSubmitEditing={verify} error={error} />
               <Button title="Sign in" onPress={verify} busy={busy} disabled={code.trim().length < 6} />
-              <Button title="Use a different email" kind="ghost" onPress={() => { setSent(false); setCode(''); setError(''); }} style={{ marginTop: 10 }} />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <Button title="Send a new code" kind="ghost" small onPress={sendCode} disabled={busy} style={{ flex: 1 }} />
+                <Button title="Change email" kind="ghost" small onPress={() => { setSent(false); setCode(''); setError(''); }} style={{ flex: 1 }} />
+              </View>
             </>
           )}
           <Text style={[s.hint, { marginTop: 18, textAlign: 'center' }]}>

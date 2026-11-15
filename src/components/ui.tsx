@@ -112,12 +112,7 @@ export const Verified = ({ on }: { on: boolean }) =>
       <Icon name="shield-check" size={14} color={C.verify} />
       <Text style={{ color: C.verify, fontWeight: '700', fontSize: 12.5 }}>ID verified</Text>
     </View>
-  ) : (
-    <View style={[s.verified, { backgroundColor: C.bg, borderWidth: 1, borderColor: C.line }]}>
-      <Icon name="shield-outline" size={14} color={C.muted} />
-      <Text style={{ color: C.muted, fontWeight: '700', fontSize: 12.5 }}>ID not checked yet</Text>
-    </View>
-  );
+  ) : null;
 
 export const LangTags = ({ langs }: { langs: string[] }) => (
   <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
@@ -127,7 +122,7 @@ export const LangTags = ({ langs }: { langs: string[] }) => (
   </View>
 );
 
-export function Photo({ listing, style, rounded = 14 }: { listing: Pick<Listing, 'photos' | 'category' | 'status'>; style?: StyleProp<ViewStyle>; rounded?: number }) {
+export function Photo({ listing, style, rounded = 14, tag = true }: { listing: Pick<Listing, 'photos' | 'category' | 'status'>; style?: StyleProp<ViewStyle>; rounded?: number; tag?: boolean }) {
   const url = listing.photos?.[0];
   return (
     <View style={[s.photo, { borderRadius: rounded }, style]}>
@@ -136,7 +131,8 @@ export function Photo({ listing, style, rounded = 14 }: { listing: Pick<Listing,
       ) : (
         <Icon name={categoryIcon(listing.category)} size={44} color={C.accent} />
       )}
-      {listing.status === 'sold' && <Text style={s.soldTag}>Sold</Text>}
+      {tag && listing.status === 'sold' && <Text style={s.soldTag}>Sold</Text>}
+      {tag && listing.status === 'reserved' && <Text style={[s.soldTag, { backgroundColor: C.gold }]}>Reserved</Text>}
     </View>
   );
 }
@@ -210,7 +206,7 @@ export const s = StyleSheet.create({
   verified: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.verifySoft, borderRadius: R.pill, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
   lc: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, borderWidth: 1, borderColor: C.line, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1, color: C.muted, overflow: 'hidden' },
   photo: { backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  soldTag: { position: 'absolute', left: 8, top: 8, backgroundColor: C.ink, color: C.bg, fontSize: 11, fontWeight: '700', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
+  soldTag: { position: 'absolute', right: 8, top: 8, backgroundColor: C.ink, color: C.bg, fontSize: 11, fontWeight: '700', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
   price: { fontSize: 18, fontWeight: '800', color: C.ink },
   title: { fontSize: 14, color: C.ink, lineHeight: 18 },
   meta: { fontSize: 12.5, color: C.muted },

@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { CHAT_SELECT, other, type ChatSummary } from '@/lib/chats';
 import { langCode } from '@/lib/constants';
 import { notify } from '@/lib/dialog';
+import { friendly } from '@/lib/errors';
 import { price, time } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -48,7 +49,10 @@ export default function Chat() {
     if (!body) return;
     if (kind === 'text') setText('');
     const { data, error } = await supabase.from('messages').insert({ conversation_id: id, sender_id: me, kind, body }).select('*').single();
-    if (error) return notify('Message not sent', error.message.includes('row-level') ? 'You can no longer message this person.' : error.message);
+    if (error) {
+      if (kind === 'text') setText(body); // keep what they typed so they can try again
+      return notify('Message not sent', error.message.includes('row-level') ? 'You can no longer message this person.' : friendly(error));
+    }
     add(data as Message);
   };
 
@@ -81,7 +85,7 @@ export default function Chat() {
         {chat.listing && (
           <Pressable onPress={() => router.push(`/item/${chat.listing_id}`)}
             style={{ flexDirection: 'row', gap: 10, alignItems: 'center', padding: 8, paddingHorizontal: 12, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.line }}>
-            <Photo listing={chat.listing} style={{ width: 40, height: 40 }} rounded={8} />
+            <Photo listing={chat.listing} style={{ width: 40, height: 40 }} rounded={8} tag={false} />
             <View style={{ flex: 1 }}>
               <Text style={s.title} numberOfLines={1}>{chat.listing.title}</Text>
               <Text style={s.meta}>{price(chat.listing.price)} · Pickup only{chat.listing.status === 'sold' ? ' · Sold' : ''}</Text>
@@ -97,6 +101,13 @@ export default function Chat() {
           ListHeaderComponent={<Text style={[s.meta, { textAlign: 'center', paddingHorizontal: 18, paddingBottom: 6 }]}>Meet somewhere public or bring a friend. Check the item, then pay in person.</Text>}
           renderItem={({ item: m }) => {
             const mine = m.sender_id === me;
+            if (m.kind === 'system') return (
+              <View style={{ alignSelf: 'center', flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: C.surface, borderWidth: 1,
+                borderColor: C.line, borderRadius: 14, padding: 8, paddingHorizontal: 12, maxWidth: '90%' }}>
+                <Icon name="information-outline" size={16} color={C.accent} />
+                <Text style={{ color: C.ink, fontSize: 13, lineHeight: 18, flexShrink: 1 }}>{m.body}</Text>
+              </View>
+            );
             if (m.kind === 'contact') return (
               <View style={{ alignSelf: 'center', backgroundColor: C.accentSoft, borderRadius: 14, padding: 10, paddingHorizontal: 14 }}>
                 <Text style={{ textAlign: 'center', color: C.ink, fontSize: 13.5, lineHeight: 20 }}>

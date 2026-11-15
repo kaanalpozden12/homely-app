@@ -6,9 +6,11 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Chip, Chips, Field, Header, Icon, Label, Note, s } from '@/components/ui';
-import { uploadPhoto } from '@/lib/api';
+import { removePhotos, uploadPhoto } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { CATEGORIES, CONDITIONS, HYGIENE, MAX_PHOTOS, REQUIRE_ID_TO_SELL } from '@/lib/constants';
+import { CATEGORIES, CONDITIONS, HYGIENE, MAX_PHOTOS } from '@/lib/constants';
+import { friendly } from '@/lib/errors';
+import { useSettings } from '@/lib/settings';
 import { isFullPostcode, lookupPostcode } from '@/lib/geo';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -16,7 +18,8 @@ import { C } from '@/lib/theme';
 type Picked = { uri: string; mime: string };
 
 export default function Sell() {
-  const { session, profile } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
+  const settings = useSettings();
   const [photos, setPhotos] = useState<Picked[]>([]);
   const [title, setTitle] = useState('');
   const [priceText, setPriceText] = useState('');
@@ -28,16 +31,33 @@ export default function Sell() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  if (REQUIRE_ID_TO_SELL && profile && !profile.id_verified) {
+  if (settings.require_id_to_sell && profile && !profile.id_verified) {
+    const requested = !!profile.id_check_requested_at;
+    const request = async () => {
+      setBusy(true);
+      const { error } = await supabase.rpc('request_id_check');
+      if (!error) await refreshProfile();
+      setBusy(false);
+      if (error) setError(friendly(error));
+    };
     return (
       <SafeAreaView style={s.screen} edges={['top']}>
         <Header title="Sell an item" />
         <View style={[s.pad, { gap: 14 }]}>
           <Note icon="shield-account-outline">
-            <Text style={{ fontWeight: '700', color: C.ink }}>Your ID check is next.</Text> To keep Homely safe, every seller's
-            ID is checked once before they can post. We'll contact you to arrange a short video call. You can still browse and
-            message sellers in the meantime.
+            <Text style={{ fontWeight: '700', color: C.ink }}>One quick ID check before you sell.</Text> To keep Homely safe, every
+            seller's ID is checked once on a short video call. You can browse, reserve and message sellers in the meantime.
           </Note>
+          {requested ? (
+            <Note icon="check-circle-outline">
+              <Text style={{ fontWeight: '700', color: C.ink }}>Request received.</Text> We'll contact you by email
+              {' '}(check your spam folder too), or by phone or Instagram if you added them in your profile, usually within 2 days.
+            </Note>
+          ) : (
+            <Button title="Request my ID check" icon="shield-check-outline" onPress={request} busy={busy} />
+          )}
+          <Button title="Add phone or Instagram" kind="ghost" onPress={() => router.push('/edit-profile')} />
+          {error ? <Text style={s.error}>{error}</Text> : null}
         </View>
       </SafeAreaView>
     );
@@ -62,12 +82,13 @@ export default function Sell() {
     if (t.length < 3) return setError("Add a title so buyers know what you're selling.");
     if (!(p >= 0)) return setError("Add a price in pounds. Use 0 if it's free.");
     if (!isFullPostcode(postcode)) return setError('Add your full pickup postcode, like SW3 4RY.');
+    if (p > 100000) return setError('The highest price you can set is £100,000.');
     setBusy(true);
     setError('');
+    const urls: string[] = [];
     try {
       const place = await lookupPostcode(postcode);
       if (!place) throw new Error("We couldn't find that postcode. Check it and try again.");
-      const urls: string[] = [];
       for (const ph of photos) urls.push(await uploadPhoto(ph.uri, session!.user.id, ph.mime));
       const { data, error } = await supabase
         .from('listings')
@@ -80,8 +101,9 @@ export default function Sell() {
       if (error) throw error;
       setPhotos([]); setTitle(''); setPriceText(''); setDescription('');
       router.push(`/item/${data.id}`);
-    } catch (e: any) {
-      setError(e.message ?? 'Something went wrong. Try again.');
+    } catch (e) {
+      removePhotos(urls).catch(() => {}); // don't leave half-uploaded photos behind
+      setError(friendly(e));
     } finally {
       setBusy(false);
     }

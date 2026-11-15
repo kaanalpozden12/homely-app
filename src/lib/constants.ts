@@ -1,8 +1,5 @@
 // Product settings. Change these to adjust how the app behaves.
 
-/** Only sellers whose ID has been checked can post listings. */
-export const REQUIRE_ID_TO_SELL = true;
-
 /** Where buyers start if they have not entered a postcode (Chelsea, SW3). */
 export const DEFAULT_LOCATION = { label: 'SW3', lat: 51.4900, lng: -0.1680 };
 
