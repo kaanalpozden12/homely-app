@@ -29,8 +29,8 @@
       "favicon": "./assets/images/favicon.png",
       "name": "Homely",
       "shortName": "Homely",
-      "themeColor": "#0E7C66",
-      "backgroundColor": "#F5F7F6",
+      "themeColor": "#0F6B57",
+      "backgroundColor": "#F7F5F0",
       "description": "Buy and sell second-hand furniture and household items in London, from neighbours who speak your language."
     },
     "plugins": [
@@ -38,7 +38,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F5F7F6",
+          "backgroundColor": "#F7F5F0",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }

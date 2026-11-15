@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui';
-import { C } from '@/lib/theme';
+import { BRAND } from '@/lib/brand';
+import { C, R, shadow } from '@/lib/theme';
 
 const KEY = 'homely.cookie-notice.v1';
 
@@ -22,9 +23,9 @@ export function CookieNotice() {
   };
   return (
     <View style={{ position: 'absolute', left: 12, right: 12, bottom: 70, flexDirection: 'row', gap: 10, alignItems: 'center',
-      backgroundColor: C.ink, borderRadius: 14, padding: 12, paddingHorizontal: 14 }}>
+      backgroundColor: C.ink, borderRadius: R.lg, padding: 14, paddingHorizontal: 16, ...shadow(2) }}>
       <Text style={{ flex: 1, color: '#fff', fontSize: 13, lineHeight: 18 }}>
-        Homely uses no tracking or advertising cookies, only the storage needed to keep you signed in.{' '}
+        {BRAND.name} uses no tracking or advertising cookies, only the storage needed to keep you signed in.{' '}
         <Text style={{ fontWeight: '700', textDecorationLine: 'underline' }} onPress={() => router.push('/privacy')}>Privacy policy</Text>
       </Text>
       <Pressable accessibilityLabel="Close" onPress={close} hitSlop={10}>

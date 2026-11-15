@@ -1,12 +1,13 @@
-import { Stack, type ErrorBoundaryProps } from 'expo-router';
+import { Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CookieNotice } from '@/components/cookie-notice';
 import { TermsModal } from '@/components/terms-modal';
 import { Button, Loading, s } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { BRAND } from '@/lib/brand';
 import { FiltersProvider } from '@/lib/location';
 import { isConfigured } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -45,7 +46,7 @@ function NotConfigured() {
     <View style={[s.screen, { justifyContent: 'center', padding: 24, gap: 10 }]}>
       <Text style={s.h1}>Almost ready</Text>
       <Text style={s.p}>
-        Homely is not connected to its database yet. Add EXPO_PUBLIC_SUPABASE_URL and
+        {BRAND.name} is not connected to its database yet. Add EXPO_PUBLIC_SUPABASE_URL and
         EXPO_PUBLIC_SUPABASE_ANON_KEY to the .env file (see README.md), then restart.
       </Text>
     </View>
@@ -53,13 +54,19 @@ function NotConfigured() {
 }
 
 export default function RootLayout() {
+  const path = usePathname();
+  const { width } = useWindowDimensions();
+  // The landing page uses the full width of a computer screen; the app itself stays phone-sized and centred.
+  const landing = path === '/sign-in';
+  const framed = !landing && width > 600;
   return (
     <SafeAreaProvider>
       <AuthProvider>
         <FiltersProvider>
           <StatusBar style="dark" />
-          <View style={{ flex: 1, backgroundColor: C.bg }}>
-            <View style={{ flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center' }}>
+          <View style={{ flex: 1, backgroundColor: framed ? C.sunken : C.bg }}>
+            <View style={[{ flex: 1, width: '100%', maxWidth: landing ? undefined : 560, alignSelf: 'center', backgroundColor: C.bg },
+              framed && { borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.line }]}>
               <Routes />
               <TermsModal />
               <CookieNotice />

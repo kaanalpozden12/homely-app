@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { TermsLink } from '@/components/terms-modal';
 import { Button, Chip, Chips, Field, Icon, Label, s } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { BRAND } from '@/lib/brand';
 import { LANGUAGES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -74,14 +75,14 @@ export function ProfileForm({ isNew }: { isNew: boolean }) {
         hint="Private. Only shared with someone when you tap Share contact in a chat." />
       {isNew && (
         <Pressable onPress={() => setAgree(!agree)} style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 16 }}>
-          <Icon name={agree ? 'checkbox-marked' : 'checkbox-blank-outline'} size={24} color={C.accent} />
+          <Icon name={agree ? 'checkbox-marked' : 'checkbox-blank-outline'} size={24} color={agree ? C.accent : C.faint} />
           <Text style={[s.p, { flex: 1 }]}>
             I agree to the <TermsLink />, and I am 18 or over.
           </Text>
         </Pressable>
       )}
       {error ? <Text style={[s.error, { marginBottom: 10 }]}>{error}</Text> : null}
-      <Button title={isNew ? 'Start using Homely' : 'Save'} onPress={save} busy={busy} />
+      <Button title={isNew ? `Start using ${BRAND.name}` : 'Save'} onPress={save} busy={busy} />
       <View style={{ height: 20 }} />
     </ScrollView>
   );

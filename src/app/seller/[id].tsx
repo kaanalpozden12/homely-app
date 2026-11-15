@@ -12,7 +12,7 @@ import { confirm } from '@/lib/dialog';
 import { monthYear } from '@/lib/format';
 import { useFilters } from '@/lib/location';
 import { supabase } from '@/lib/supabase';
-import { C } from '@/lib/theme';
+import { C, shadow } from '@/lib/theme';
 import type { Listing, Profile } from '@/lib/types';
 
 export default function Seller() {
@@ -31,7 +31,7 @@ export default function Seller() {
   }, [id, filters.lat, filters.lng]);
 
   if (p === undefined) return <SafeAreaView style={s.screen}><Loading /></SafeAreaView>;
-  if (p === null) return <SafeAreaView style={s.screen}><Header back /><Empty title="Not found" text="This account no longer exists." /></SafeAreaView>;
+  if (p === null) return <SafeAreaView style={s.screen}><Header back /> <Empty icon="account-off-outline" title="Not found" text="This account no longer exists." /></SafeAreaView>;
 
   const doBlock = async () => {
     if (!(await confirm(`Block ${p.name}?`, "You won't see each other's listings and can't message each other.", 'Block', true))) return;
@@ -41,24 +41,24 @@ export default function Seller() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <Header back title="Seller" />
+      <Header back title={p.name} />
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={{ alignItems: 'center', gap: 6, padding: 16 }}>
-          <Avatar id={p.id} name={p.name} size={84} />
-          <Text style={{ fontSize: 24, fontWeight: '800', color: C.ink, marginTop: 6 }}>{p.name}</Text>
-          <Text style={s.meta}>{p.area ? `${p.area} · ` : ''}Joined {monthYear(p.created_at)}</Text>
-          <Verified on={p.id_verified} />
-        </View>
         <View style={s.pad}>
+          <View style={[s.card, { padding: 18, alignItems: 'center', gap: 6 }, shadow(1)]}>
+            <Avatar id={p.id} name={p.name} size={76} />
+            <Text style={[s.h2, { marginTop: 6 }]}>{p.name}</Text>
+            <Text style={s.meta}>{p.area ? `${p.area} · ` : ''}Joined {monthYear(p.created_at)}</Text>
+            <Verified on={p.id_verified} center />
+          </View>
           <Label>Speaks</Label>
           <Chips wrap>{p.languages.map((l) => <Chip key={l} label={l} sub={langCode(l)} />)}</Chips>
           <Label>Listings</Label>
         </View>
         {items.length ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 16 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, rowGap: 18, paddingHorizontal: 16 }}>
             {items.map((it) => <ListingCard key={it.id} item={it} width={cardW} />)}
           </View>
-        ) : <Empty title="Nothing for sale right now" text="Check back later." />}
+        ) : <Empty icon="tag-outline" title="Nothing for sale right now" text="Check back later." />}
         {p.id !== me && (
           <View style={[s.pad, { marginTop: 24, gap: 4 }]}>
             <Pressable onPress={() => setReporting(true)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingVertical: 10 }}>

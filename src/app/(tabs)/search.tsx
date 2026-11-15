@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Chip, Chips, Empty, Header, Label, ListingRow, Loading, s } from '@/components/ui';
+import { Button, Chip, Chips, Empty, Field, Header, ListingRow, Loading, Section, s, type IconName } from '@/components/ui';
 import { findListings } from '@/lib/api';
 import { CATEGORIES, LANGUAGES, RADII } from '@/lib/constants';
 import { lookupPostcode } from '@/lib/geo';
 import { useFilters } from '@/lib/location';
+import { shadow } from '@/lib/theme';
 import type { Listing } from '@/lib/types';
 
 export default function Search() {
@@ -47,41 +48,48 @@ export default function Search() {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <Header title="Search" />
-      <ScrollView contentContainerStyle={[s.pad, { paddingBottom: 30 }]} keyboardShouldPersistTaps="handled">
-        <TextInput style={s.input} value={q} onChangeText={setQ} placeholder="Sofa, pram, bike, coat…" placeholderTextColor="#98A3A6"
-          accessibilityLabel="What are you looking for?" returnKeyType="search" />
-        <Label>Your location</Label>
-        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-          <TextInput style={[s.input, { flex: 1 }]} value={pc} onChangeText={setPc} placeholder="Your postcode, e.g. SW3 4RY"
-            placeholderTextColor="#98A3A6" autoCapitalize="characters" autoComplete="postal-code" onSubmitEditing={setPostcode} accessibilityLabel="Postcode" />
-          <Button title="Set" small onPress={setPostcode} busy={pcBusy} />
+      <ScrollView contentContainerStyle={[s.pad, { paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">
+        <Field value={q} onChangeText={setQ} placeholder="Sofa, pram, bike, coat…" icon="magnify"
+          accessibilityLabel="What are you looking for?" returnKeyType="search" style={shadow(1)} />
+        <Section title="Where" sub="Sellers' exact addresses are never shown, only a rounded distance.">
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+            <View style={{ flex: 1 }}>
+              <Field value={pc} onChangeText={setPc} placeholder="Your postcode, e.g. SW3 4RY" icon="map-marker-outline"
+                autoCapitalize="characters" autoComplete="postal-code" onSubmitEditing={setPostcode} accessibilityLabel="Postcode" error={pcError} />
+            </View>
+            <Button title="Set" onPress={setPostcode} busy={pcBusy} kind="soft" />
+          </View>
+          <Chips wrap>
+            {RADII.map((r) => <Chip key={r.label} label={r.value ? `Within ${r.label}` : 'Any distance'} on={filters.radius === r.value} onPress={() => setFilters({ radius: r.value })} />)}
+          </Chips>
+        </Section>
+        <Section title="Seller speaks" sub="Pick one or more. You'll see items from people who speak them.">
+          <Chips wrap>
+            <Chip label="Any language" on={!filters.languages.length} onPress={() => setFilters({ languages: [] })} />
+            {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={filters.languages.includes(l)} onPress={() => toggleLang(l)} />)}
+          </Chips>
+        </Section>
+        <Section title="Category">
+          <Chips wrap>
+            {[{ name: 'All', icon: 'view-grid-outline' }, { name: 'Free', icon: 'gift-outline' }, ...CATEGORIES].map((c) => (
+              <Chip key={c.name} label={c.name} icon={c.icon as IconName} on={(filters.category ?? 'All') === c.name}
+                onPress={() => setFilters({ category: c.name === 'All' ? null : c.name })} />
+            ))}
+          </Chips>
+        </Section>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 8, gap: 8 }}>
+          <Text style={s.h2}>{items ? `${items.length} result${items.length === 1 ? '' : 's'}` : 'Results'}</Text>
+          <Chips>
+            {([['near', 'Nearest'], ['new', 'Newest'], ['cheap', 'Cheapest']] as const).map(([k, n]) => (
+              <Chip key={k} label={n} on={filters.sort === k} onPress={() => setFilters({ sort: k })} />
+            ))}
+          </Chips>
         </View>
-        {pcError ? <Text style={[s.error, { marginTop: 6 }]}>{pcError}</Text> : null}
-        <Label>Distance</Label>
-        <Chips wrap>
-          {RADII.map((r) => <Chip key={r.label} label={r.label} on={filters.radius === r.value} onPress={() => setFilters({ radius: r.value })} />)}
-        </Chips>
-        <Text style={[s.hint, { marginTop: 8 }]}>Sellers' exact addresses are never shown. You only see a rounded distance.</Text>
-        <Label>Seller speaks</Label>
-        <Chips wrap>
-          <Chip label="Any language" on={!filters.languages.length} onPress={() => setFilters({ languages: [] })} />
-          {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={filters.languages.includes(l)} onPress={() => toggleLang(l)} />)}
-        </Chips>
-        <Label>Category</Label>
-        <Chips wrap>
-          {['All', 'Free', ...CATEGORIES.map((c) => c.name)].map((c) => (
-            <Chip key={c} label={c} on={(filters.category ?? 'All') === c} onPress={() => setFilters({ category: c === 'All' ? null : c })} />
-          ))}
-        </Chips>
-        <Label>Sort by</Label>
-        <Chips wrap>
-          {([['near', 'Nearest'], ['new', 'Newest'], ['cheap', 'Lowest price']] as const).map(([k, n]) => (
-            <Chip key={k} label={n} on={filters.sort === k} onPress={() => setFilters({ sort: k })} />
-          ))}
-        </Chips>
-        <Label>{items ? `${items.length} result${items.length === 1 ? '' : 's'}` : 'Results'}</Label>
-        {items === null ? <Loading /> : items.length ? items.map((it) => <ListingRow key={it.id} item={it} />) :
-          <Empty title="No matches" text="Try a bigger distance, another language or a different word." />}
+        {items === null ? <Loading /> : items.length ? (
+          <View style={[s.box, { paddingVertical: 2 }]}>
+            {items.map((it, i) => <ListingRow key={it.id} item={it} last={i === items.length - 1} />)}
+          </View>
+        ) : <Empty title="No matches" text="Try a bigger distance, another language or a different word." />}
       </ScrollView>
     </SafeAreaView>
   );
