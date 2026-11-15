@@ -103,6 +103,15 @@ table with the commission charged.
 
 If an automatic refund fails, **transactions.refund_status** shows `failed`: refund it in the Stripe dashboard and set it to `refunded`.
 
+## Look and brand
+
+- Colours, corner sizes and spacing: `src/lib/theme.ts`. Shared buttons, cards, chips and empty states: `src/components/ui.tsx`.
+- Typeface: Plus Jakarta Sans on the website (loaded in `public/index.html`); phones use the system font.
+- **Changing the name:** edit `src/lib/brand.ts` (name, logo text, tagline). Then also update `app.json` (name, slug, scheme),
+  `public/index.html` (title and link previews), `public/manifest.json`, the terms and privacy text in
+  `src/components/terms-text.tsx`, and the icons in `public/` and `assets/images/`.
+- Before and after screenshots of the redesign: `docs/design/`.
+
 ## For developers
 
 - Screens live in `src/app` (Expo Router). Shared pieces in `src/components`, logic in `src/lib`.

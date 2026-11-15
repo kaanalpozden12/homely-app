@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, Chip, Icon, Loading, Photo, s } from '@/components/ui';
+import { Avatar, BackButton, Button, Chip, Icon, Loading, Photo, s } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { CHAT_SELECT, other, type ChatSummary } from '@/lib/chats';
 import { langCode } from '@/lib/constants';
@@ -11,7 +11,7 @@ import { notify } from '@/lib/dialog';
 import { friendly } from '@/lib/errors';
 import { price, time } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
-import { C } from '@/lib/theme';
+import { C, R, shadow } from '@/lib/theme';
 import type { Contacts, Message } from '@/lib/types';
 
 const QUICK = ['Is this still available?', 'Can I pick it up this weekend?', 'Would you take a bit less?'];
@@ -69,27 +69,26 @@ export default function Chat() {
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: C.line }}>
-          <Pressable accessibilityLabel="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/chats'))} style={s.iconBtn}>
-            <Icon name="chevron-left" size={24} />
-          </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, paddingHorizontal: 12, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.line }}>
+          <BackButton fallback="/chats" />
           <Pressable style={{ flex: 1, flexDirection: 'row', gap: 10, alignItems: 'center' }} onPress={() => router.push(`/seller/${o.id}`)}>
-            <Avatar id={o.id} name={o.name ?? '?'} size={38} />
+            <Avatar id={o.id} name={o.name ?? '?'} size={40} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '700', color: C.ink }}>{o.name}</Text>
-              <Text style={[s.meta, { fontSize: 12 }]}>{o.id_verified ? 'ID verified · ' : ''}speaks {(o.languages ?? []).map(langCode).join(', ')}</Text>
+              <Text style={s.h3} numberOfLines={1}>{o.name}</Text>
+              <Text style={[s.meta, { fontSize: 12 }]} numberOfLines={1}>{o.id_verified ? 'ID verified · ' : ''}Speaks {(o.languages ?? []).map(langCode).join(', ')}</Text>
             </View>
           </Pressable>
-          <Button title="Share contact" kind="ghost" small onPress={() => hasContacts ? setSharing(true) : notify('No contact details yet', 'Add your phone or Instagram in Profile > Edit profile first.')} />
+          <Button title="Share contact" kind="soft" small onPress={() => hasContacts ? setSharing(true) : notify('No contact details yet', 'Add your phone or Instagram in Profile > Edit profile first.')} />
         </View>
         {chat.listing && (
           <Pressable onPress={() => router.push(`/item/${chat.listing_id}`)}
-            style={{ flexDirection: 'row', gap: 10, alignItems: 'center', padding: 8, paddingHorizontal: 12, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.line }}>
-            <Photo listing={chat.listing} style={{ width: 40, height: 40 }} rounded={8} tag={false} />
+            style={[{ flexDirection: 'row', gap: 12, alignItems: 'center', padding: 10, margin: 12, marginBottom: 0 }, s.card, shadow(1)]}>
+            <Photo listing={chat.listing} style={{ width: 46, height: 46 }} rounded={R.sm + 2} tag={false} />
             <View style={{ flex: 1 }}>
-              <Text style={s.title} numberOfLines={1}>{chat.listing.title}</Text>
-              <Text style={s.meta}>{price(chat.listing.price)} · Pickup only{chat.listing.status === 'sold' ? ' · Sold' : ''}</Text>
+              <Text style={[s.title, { fontWeight: '600' }]} numberOfLines={1}>{chat.listing.title}</Text>
+              <Text style={s.meta}><Text style={{ fontWeight: '800', color: C.ink }}>{price(chat.listing.price)}</Text> · Pickup only{chat.listing.status === 'sold' ? ' · Sold' : ''}</Text>
             </View>
+            <Icon name="chevron-right" size={20} color={C.faint} />
           </Pressable>
         )}
         <FlatList
@@ -98,7 +97,11 @@ export default function Chat() {
           keyExtractor={(m) => String(m.id)}
           contentContainerStyle={{ padding: 12, gap: 8 }}
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: false })}
-          ListHeaderComponent={<Text style={[s.meta, { textAlign: 'center', paddingHorizontal: 18, paddingBottom: 6 }]}>Meet somewhere public or bring a friend. Check the item, then pay in person.</Text>}
+          ListHeaderComponent={
+            <View style={{ flexDirection: 'row', gap: 6, alignSelf: 'center', alignItems: 'center', paddingHorizontal: 18, paddingBottom: 8, maxWidth: 360 }}>
+              <Icon name="shield-check-outline" size={16} color={C.accent} />
+              <Text style={[s.meta, { textAlign: 'center', flexShrink: 1 }]}>Meet somewhere public or bring a friend. Check the item, then pay in person.</Text>
+            </View>}
           renderItem={({ item: m }) => {
             const mine = m.sender_id === me;
             if (m.kind === 'system') return (
@@ -118,10 +121,10 @@ export default function Chat() {
             );
             return (
               <View style={{ maxWidth: '78%', alignSelf: mine ? 'flex-end' : 'flex-start', backgroundColor: mine ? C.accent : C.surface,
-                borderWidth: 1, borderColor: mine ? C.accent : C.line, borderRadius: 18, paddingVertical: 9, paddingHorizontal: 13,
-                borderBottomRightRadius: mine ? 6 : 18, borderBottomLeftRadius: mine ? 18 : 6 }}>
+                borderWidth: mine ? 0 : 1, borderColor: C.line, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 14,
+                borderBottomRightRadius: mine ? 6 : 20, borderBottomLeftRadius: mine ? 20 : 6 }}>
                 <Text style={{ color: mine ? C.accentInk : C.ink, fontSize: 14.5, lineHeight: 20 }} selectable>{m.body}</Text>
-                <Text style={{ color: mine ? C.accentInk : C.muted, opacity: 0.7, fontSize: 11, marginTop: 3 }}>{time(m.created_at)}</Text>
+                <Text style={{ color: mine ? C.accentInk : C.muted, opacity: 0.75, fontSize: 11, marginTop: 3, alignSelf: 'flex-end' }}>{time(m.created_at)}</Text>
               </View>
             );
           }}
@@ -132,11 +135,11 @@ export default function Chat() {
           </View>
         )}
         <View style={{ flexDirection: 'row', gap: 8, padding: 10, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: C.surface }}>
-          <TextInput value={text} onChangeText={setText} placeholder={`Message ${o.name}`} placeholderTextColor="#98A3A6"
+          <TextInput value={text} onChangeText={setText} placeholder={`Message ${o.name}`} placeholderTextColor={C.faint}
             onSubmitEditing={() => send(text)} returnKeyType="send" accessibilityLabel="Message" maxLength={2000}
-            style={{ flex: 1, borderWidth: 1, borderColor: C.line, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: C.bg, color: C.ink, fontSize: 15 }} />
+            style={{ flex: 1, borderWidth: 1, borderColor: C.line, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 11, backgroundColor: C.bg, color: C.ink, fontSize: 15.5 }} />
           <Pressable accessibilityLabel="Send" onPress={() => send(text)}
-            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' }}>
+            style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: text.trim() ? C.accent : C.faint, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="send" size={20} color={C.accentInk} />
           </Pressable>
         </View>

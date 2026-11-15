@@ -5,7 +5,7 @@ import { Linking, Platform, Pressable, ScrollView, Text, useWindowDimensions, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReportSheet } from '@/components/report-sheet';
-import { Avatar, Button, Empty, Icon, LangTags, Loading, Note, Photo, Verified, s } from '@/components/ui';
+import { Avatar, BackButton, Button, Empty, Icon, LangTags, Loading, Note, Photo, Section, Tag, Verified, s, type IconName } from '@/components/ui';
 import {
   cancelTransaction, completeTransaction, findListings, openConversation, openTransaction, removePhotos, reserve, startCheckout,
 } from '@/lib/api';
@@ -16,7 +16,9 @@ import { ago, distance, price } from '@/lib/format';
 import { useFilters } from '@/lib/location';
 import { fee, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
-import { C } from '@/lib/theme';
+import { BRAND } from '@/lib/brand';
+import { categoryIcon } from '@/lib/constants';
+import { C, FONT, R, shadow } from '@/lib/theme';
 import type { Listing, Transaction } from '@/lib/types';
 
 export default function Item() {
@@ -57,8 +59,9 @@ export default function Item() {
   if (it === undefined) return <SafeAreaView style={s.screen}><Loading /></SafeAreaView>;
   if (it === null) return (
     <SafeAreaView style={s.screen}>
-      <Back />
-      <Empty title="Listing not found" text="It may have been removed by the seller." />
+      <View style={{ padding: 12 }}><BackButton /></View>
+      <Empty icon="tag-off-outline" title="Listing not found" text="It may have been sold or removed by the seller."
+        action={{ title: 'Browse other items', onPress: () => router.replace('/') }} />
     </SafeAreaView>
   );
 
@@ -114,8 +117,8 @@ export default function Item() {
     const ok = await confirm(
       f ? `Reserve for ${fee(f)}?` : 'Reserve this item?',
       (f
-        ? `Pay a ${fee(f)} Homely fee by card and the item is held for you. `
-        : 'Reserving is free while Homely is new. The item is held for you. ') +
+        ? `Pay a ${fee(f)} ${BRAND.name} fee by card and the item is held for you. `
+        : `Reserving is free while ${BRAND.name} is new. The item is held for you. `) +
         `You pay ${price(it.price)} to ${it.seller_name} in person when you collect it.` +
         (f ? ' If the seller cancels, the fee is refunded.' : ''),
       f ? 'Continue to payment' : 'Reserve',
@@ -140,8 +143,8 @@ export default function Item() {
     const ok = await confirm(
       'Cancel the reservation?',
       seller
-        ? `The item goes back on sale.${paidFee ? " The buyer's Homely fee is refunded." : ''}`
-        : `The item goes back on sale for others.${paidFee ? ' The Homely fee is not refunded when the buyer cancels.' : ''}`,
+        ? `The item goes back on sale.${paidFee ? ` The buyer's ${BRAND.name} fee is refunded.` : ''}`
+        : `The item goes back on sale for others.${paidFee ? ` The ${BRAND.name} fee is not refunded when the buyer cancels.` : ''}`,
       'Cancel reservation', true,
     );
     if (ok) await run('Could not cancel the reservation', () => cancelTransaction(tx.id));
@@ -177,7 +180,7 @@ export default function Item() {
     if (tx && tx.buyer_id === me) {
       if (tx.status === 'awaiting_payment') return (
         <>
-          <Status icon="credit-card-outline" text={paid ? 'Confirming your payment…' : `Pay the ${fee(tx.commission_pence)} Homely fee to hold this item for you.`} />
+          <Status icon="credit-card-outline" text={paid ? 'Confirming your payment…' : `Pay the ${fee(tx.commission_pence)} ${BRAND.name} fee to hold this item for you.`} />
           <View style={row}>
             <Button title={`Pay ${fee(tx.commission_pence)}`} onPress={() => run('Could not open card payment', () => pay(tx))} busy={busy} style={{ flex: 1 }} />
             <Button title="Cancel" kind="ghost" onPress={doCancel} disabled={busy} />
@@ -218,60 +221,75 @@ export default function Item() {
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / w))}
               onScroll={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / w))} scrollEventThrottle={64}>
-              {it.photos.map((u) => <Image key={u} source={{ uri: u }} style={{ width: w, height: w * 0.8 }} contentFit="cover" />)}
+              {it.photos.map((u) => <Image key={u} source={{ uri: u }} style={{ width: w, height: w * 0.92 }} contentFit="cover" />)}
             </ScrollView>
-          ) : <Photo listing={it} style={{ width: w, height: w * 0.75 }} rounded={0} />}
+          ) : <Photo listing={it} style={{ width: w, height: w * 0.8 }} rounded={0} tag={false} />}
           {it.photos.length > 1 && (
-            <View style={{ position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6 }}>
-              {it.photos.map((u, i) => <View key={u} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === page ? '#fff' : '#fff8' }} />)}
+            <View style={{ position: 'absolute', bottom: 32, right: 14, backgroundColor: 'rgba(22,32,28,0.7)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{page + 1} / {it.photos.length}</Text>
             </View>
           )}
-          <View style={{ position: 'absolute', left: 12, top: 12 }}><Back bare /></View>
+          <View style={{ position: 'absolute', left: 12, top: 12 }}><BackButton floating /></View>
         </View>
 
-        <View style={sec}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: C.ink }}>{price(it.price)}</Text>
-          <Text style={{ fontSize: 19, fontWeight: '600', color: C.ink, marginTop: 2, marginBottom: 6 }}>{it.title}</Text>
-          <Text style={s.meta}>Posted {ago(it.created_at)}{it.status === 'sold' ? ' · Sold' : it.status === 'reserved' ? ' · Reserved' : ''}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {[it.condition, it.category, 'Pickup only'].map((p) => (
-              <Text key={p} style={{ fontSize: 12.5, fontWeight: '600', backgroundColor: C.accentSoft, color: C.ink, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, overflow: 'hidden' }}>{p}</Text>
-            ))}
-          </View>
-        </View>
-        {it.description ? <View style={sec}><Text style={s.p}>{it.description}</Text></View> : null}
-        <View style={sec}>
-          <Text style={[s.label, { marginTop: 0 }]}>Hygiene checklist</Text>
-          {it.hygiene.length ? it.hygiene.map((h) => (
-            <View key={h} style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 7 }}>
-              <Icon name="check" size={18} color={C.accent} /><Text style={s.p}>{h}</Text>
+        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, marginTop: -20, paddingTop: 20 }}>
+          <View style={[s.pad, { paddingBottom: 16 }]}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {it.status === 'sold' && <Tag text="Sold" tone="dark" />}
+              {it.status === 'reserved' && <Tag text="Reserved" icon="clock-outline" tone="gold" />}
+              <Tag text={it.condition} icon="star-outline" tone="accent" />
+              <Tag text={it.category} icon={categoryIcon(it.category) as IconName} />
+              <Tag text="Pickup only" icon="walk" />
             </View>
-          )) : <Text style={s.meta}>The seller did not fill in the checklist.</Text>}
-        </View>
-        <View style={[sec, { gap: 10 }]}>
-          <Note icon="map-marker-outline">
-            <Text style={{ fontWeight: '700', color: C.ink }}>{distance(it.distance_miles)} from {filters.label}</Text> · {it.area}{'\n'}
-            The exact address is shared in chat once you agree a pickup.
-          </Note>
-          <Note icon="hand-coin-outline">
-            <Text style={{ fontWeight: '700', color: C.ink }}>Collect and pay in person.</Text> Check the item before you pay. Never send money in advance.
-          </Note>
-        </View>
-        <Pressable style={[sec, { flexDirection: 'row', gap: 12, alignItems: 'center' }]} onPress={() => router.push(`/seller/${it.seller_id}`)}>
-          <Avatar id={it.seller_id} name={it.seller_name} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ fontWeight: '700', color: C.ink }}>{it.seller_name}</Text>
-            <LangTags langs={it.seller_languages} />
+            <Text style={[s.h1, { fontSize: 23, lineHeight: 29, letterSpacing: -0.4 }]}>{it.title}</Text>
+            <Text style={{ fontFamily: FONT, fontSize: 30, fontWeight: '800', color: it.price === 0 ? C.warm : C.accent, marginTop: 6, letterSpacing: -0.6 }}>{price(it.price)}</Text>
+            <View style={{ flexDirection: 'row', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
+              <Meta icon="map-marker-outline" text={`${distance(it.distance_miles)} · ${it.area}`} />
+              <Meta icon="clock-outline" text={`Posted ${ago(it.created_at)}`} />
+            </View>
           </View>
-          <Verified on={it.seller_verified} />
-        </Pressable>
-        {!mine && (
-          <Pressable onPress={() => setReporting(true)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', padding: 16 }}>
-            <Icon name="flag-outline" size={18} color={C.muted} /><Text style={s.meta}>Report this listing</Text>
-          </Pressable>
-        )}
+          <View style={s.pad}>
+            {it.description ? (
+              <Section title="About this item"><Text style={[s.p, { color: C.muted, lineHeight: 22 }]}>{it.description}</Text></Section>
+            ) : null}
+            <Section title="Hygiene checklist" sub="Filled in by the seller.">
+              {it.hygiene.length ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {it.hygiene.map((h) => <Tag key={h} text={h} icon="check-circle" tone="accent" />)}
+                </View>
+              ) : <Text style={s.meta}>The seller did not fill in the checklist.</Text>}
+            </Section>
+            <Pressable onPress={() => router.push(`/seller/${it.seller_id}`)} accessibilityRole="link"
+              style={({ pressed }) => [s.card, { padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 12 }, pressed && { opacity: 0.8 }]}>
+              <Avatar id={it.seller_id} name={it.seller_name} size={50} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={s.meta}>Sold by</Text>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Text style={s.h3}>{it.seller_name}</Text>
+                  <Verified on={it.seller_verified} />
+                </View>
+                <LangTags langs={it.seller_languages} max={4} />
+              </View>
+              <Icon name="chevron-right" size={22} color={C.faint} />
+            </Pressable>
+            <View style={{ gap: 10 }}>
+              <Note icon="map-marker-outline" tone="accent">
+                <Text style={{ fontWeight: '700', color: C.ink }}>{distance(it.distance_miles)} from {filters.label}.</Text> The exact address is shared in chat once you agree a pickup.
+              </Note>
+              <Note icon="shield-check-outline" tone="accent">
+                <Text style={{ fontWeight: '700', color: C.ink }}>Collect and pay in person.</Text> Check the item before you pay. Never send money in advance.
+              </Note>
+            </View>
+            {!mine && (
+              <Pressable onPress={() => setReporting(true)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
+                <Icon name="flag-outline" size={17} color={C.muted} /><Text style={s.meta}>Report this listing</Text>
+              </Pressable>
+            )}
+            <View style={{ height: 12 }} />
+          </View>
+        </View>
       </ScrollView>
-      <View style={{ gap: 8, padding: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: C.bg }}>
+      <View style={[{ gap: 8, padding: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: C.surface }, shadow(2)]}>
         {actionBar()}
       </View>
       <ReportSheet open={reporting} onClose={() => setReporting(false)} listingId={it.id} userId={it.seller_id} title="Report this listing" />
@@ -279,21 +297,16 @@ export default function Item() {
   );
 }
 
-const sec = { padding: 16, borderBottomWidth: 1, borderBottomColor: C.line } as const;
+const Meta = ({ icon, text }: { icon: string; text: string }) => (
+  <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+    <Icon name={icon} size={15} color={C.faint} />
+    <Text style={s.meta}>{text}</Text>
+  </View>
+);
 
 const Status = ({ icon, text }: { icon: string; text: string }) => (
   <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
     <Icon name={icon} size={18} color={C.accent} />
-    <Text style={[s.meta, { flex: 1, color: C.ink }]}>{text}</Text>
+    <Text style={[s.meta, { flex: 1, color: C.ink, fontSize: 13, lineHeight: 18 }]}>{text}</Text>
   </View>
 );
-
-function Back({ bare }: { bare?: boolean }) {
-  return (
-    <View style={bare ? undefined : { padding: 12 }}>
-      <Pressable accessibilityLabel="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.iconBtn}>
-        <Icon name="chevron-left" size={24} />
-      </Pressable>
-    </View>
-  );
-}
