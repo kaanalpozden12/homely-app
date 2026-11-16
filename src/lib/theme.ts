@@ -7,7 +7,7 @@ export const C = {
   sunken: '#EFECE5', // inputs, skeletons, quiet panels
   ink: '#16201C', // main text
   muted: '#5E6B66', // secondary text
-  faint: '#8E9893', // placeholders, captions
+  faint: '#6B7671', // placeholders, captions (dark enough to read: 4.7:1 on white)
   line: '#E6E1D7', // borders
   accent: '#0F6B57', // brand green
   accentDark: '#0A4F40',

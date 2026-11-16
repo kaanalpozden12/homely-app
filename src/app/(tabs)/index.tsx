@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CardSkeletons, Chip, Empty, Icon, ListingCard, Wordmark, s } from '@/components/ui';
+import { CardSkeletons, Chip, Empty, HScroll, Icon, ListingCard, Wordmark, s } from '@/components/ui';
 import { findListings } from '@/lib/api';
+import { friendly } from '@/lib/errors';
 import { CATEGORIES, LANGUAGES } from '@/lib/constants';
 import { useFilters } from '@/lib/location';
 import { C, shadow } from '@/lib/theme';
@@ -24,8 +25,8 @@ export default function Feed() {
     try {
       setItems(await findListings({ ...filters, sort: 'near' }));
       setError('');
-    } catch (e: any) {
-      setError(e.message ?? 'Could not load listings.');
+    } catch (e) {
+      setError(friendly(e, 'We could not load the listings. Please try again.'));
     }
   }, [filters]);
 
@@ -51,7 +52,7 @@ export default function Feed() {
         <Icon name="magnify" size={21} color={C.faint} />
         <Text style={{ color: C.faint, fontSize: 15.5 }}>Search sofas, prams, bikes…</Text>
       </Pressable>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4, paddingHorizontal: 10, paddingTop: 16, paddingBottom: 4 }}>
+      <HScroll contentContainerStyle={{ gap: 4, paddingHorizontal: 10, paddingTop: 16, paddingBottom: 4 }}>
         {CATS.map((c) => {
           const on = cat === c.name;
           return (
@@ -65,17 +66,17 @@ export default function Feed() {
             </Pressable>
           );
         })}
-      </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' }}>
+      </HScroll>
+      <HScroll contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' }}>
         <Icon name="translate" size={18} color={C.muted} />
         <Chip label="Any language" on={!filters.languages.length} onPress={() => setFilters({ languages: [] })} />
         {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={filters.languages.includes(l)} onPress={() => toggleLang(l)} />)}
-      </ScrollView>
+      </HScroll>
       <View style={[s.pad, { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12, gap: 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.h2}>{cat === 'All' ? `Near ${filters.label}` : cat}</Text>
           <Text style={[s.meta, { marginTop: 2 }]} numberOfLines={1}>
-            {items ? `${items.length} item${items.length === 1 ? '' : 's'}` : 'Loading'}
+            {items ? `${items.length} item${items.length === 1 ? '' : 's'}` : error ? 'Not loaded' : 'Loading'}
             {filters.languages.length ? ` · sellers speak ${filters.languages.join(' or ')}` : ' · all languages'}
           </Text>
         </View>
@@ -97,7 +98,7 @@ export default function Feed() {
           contentContainerStyle={{ gap: 18, paddingBottom: 32 }}
           renderItem={({ item }) => <ListingCard item={item} width={cardW} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
-          ListEmptyComponent={error ? <Empty icon="wifi-off" title="Something went wrong" text={error} action={{ title: 'Try again', onPress: load }} /> :
+          ListEmptyComponent={error ? <Empty icon="wifi-off" title="Couldn't load items" text={error} action={{ title: 'Try again', onPress: load }} /> :
             <Empty icon="sofa-outline" title="Nothing here yet" text="Try a bigger distance, another language or another category. Or be the first to sell something here!"
               action={{ title: 'Sell an item', onPress: () => router.navigate('/sell') }} />}
         />

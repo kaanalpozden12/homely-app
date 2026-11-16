@@ -1,10 +1,10 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import createIconSet from '@expo/vector-icons/createIconSet';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import type { ComponentProps, ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View,
-  type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
+  ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  type ScrollViewInstance, type ScrollViewProps, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 
 import { BRAND } from '@/lib/brand';
@@ -13,9 +13,14 @@ import { avatarColor, distance, price } from '@/lib/format';
 import { C, FONT, R, shadow } from '@/lib/theme';
 import type { Listing } from '@/lib/types';
 
-export type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
+import glyphs from '@/lib/icon-glyphs.json';
+
+// Material Community Icons, cut down to just the icons the app uses (12 KB instead of 1.3 MB).
+// Using a new icon? Run `python3 scripts/subset-icons.py` so it is added to the font.
+const Icons = createIconSet(glyphs, 'loftrobin-icons', require('@/assets/fonts/loftrobin-icons.ttf'));
+export type IconName = keyof typeof glyphs;
 export const Icon = ({ name, size = 20, color = C.ink }: { name: IconName | string; size?: number; color?: string }) => (
-  <MaterialCommunityIcons name={name as IconName} size={size} color={color} />
+  <Icons name={name as IconName} size={size} color={color} />
 );
 
 /** The brand logo: a small robin mark and the name. */
@@ -81,6 +86,30 @@ export function Chip({ label, sub, on, onPress, icon }: { label: string; sub?: s
       </Text>
     </Pressable>
   );
+}
+
+/**
+ * A sideways-scrolling row. On a computer, a normal mouse wheel only scrolls up and down, so the wheel
+ * is turned into sideways scrolling here; otherwise mouse users could never reach the end of the row.
+ */
+export function HScroll({ children, ...props }: ScrollViewProps & { children: ReactNode }) {
+  const ref = useRef<ScrollViewInstance>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = (ref.current as unknown as { getScrollableNode?: () => HTMLElement })?.getScrollableNode?.();
+    if (!node) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || node.scrollWidth <= node.clientWidth) return;
+      const max = node.scrollWidth - node.clientWidth;
+      const next = Math.max(0, Math.min(max, node.scrollLeft + e.deltaY));
+      if (next === node.scrollLeft) return; // at either end: let the page scroll as usual
+      e.preventDefault();
+      node.scrollLeft = next;
+    };
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => node.removeEventListener('wheel', onWheel);
+  }, []);
+  return <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} {...props}>{children}</ScrollView>;
 }
 
 export const Chips = ({ children, wrap }: { children: ReactNode; wrap?: boolean }) => (
@@ -221,7 +250,8 @@ export function ListingCard({ item, width }: { item: Listing; width: number }) {
 
 export function ListingRow({ item, last }: { item: Listing; last?: boolean }) {
   return (
-    <Pressable onPress={() => router.push(`/item/${item.id}`)} style={({ pressed }) => [s.row, last && { borderBottomWidth: 0 }, pressed && { opacity: 0.8 }]}>
+    <Pressable onPress={() => router.push(`/item/${item.id}`)} accessibilityRole="link" accessibilityLabel={`${item.title}, ${price(item.price)}`}
+      style={({ pressed }) => [s.row, last && { borderBottomWidth: 0 }, pressed && { opacity: 0.8 }]}>
       <Photo listing={item} style={{ width: 84, height: 84 }} rounded={R.md} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={[s.price, { fontSize: 17 }]}>{price(item.price)}</Text>
@@ -259,7 +289,7 @@ export const Note = ({ icon, children, tone = 'plain' }: { icon: IconName; child
 
 /** A row in a settings-style list. */
 export const ListLink = ({ icon, label, value, onPress, danger, last }: { icon: IconName; label: string; value?: string; onPress?: () => void; danger?: boolean; last?: boolean }) => (
-  <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [s.listLink, last && { borderBottomWidth: 0 }, pressed && { opacity: 0.7 }]}>
+  <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={onPress ? 'button' : undefined} style={({ pressed }) => [s.listLink, last && { borderBottomWidth: 0 }, pressed && { opacity: 0.7 }]}>
     <View style={[s.noteIcon, { backgroundColor: danger ? C.dangerSoft : C.sunken }]}>
       <Icon name={icon} size={18} color={danger ? C.danger : C.ink} />
     </View>

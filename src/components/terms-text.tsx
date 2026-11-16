@@ -1,8 +1,10 @@
-import { router } from 'expo-router';
+import { Link } from 'expo-router';
+import Head from 'expo-router/head';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Header, s } from '@/components/ui';
+import { BRAND } from '@/lib/brand';
 import { CONTACT, LEGAL_UPDATED, OPERATOR } from '@/lib/legal';
 import { C } from '@/lib/theme';
 
@@ -41,10 +43,10 @@ export const PRIVACY: Section[] = [
   ['Children', 'Loftrobin is only for people aged 18 or over.'],
 ];
 
-function Doc({ title, sections }: { title: string; sections: Section[] }) {
+function Doc({ title, sections, showTitle = true }: { title: string; sections: Section[]; showTitle?: boolean }) {
   return (
     <>
-      <Text style={{ fontSize: 22, fontWeight: '800', color: C.ink, marginBottom: 4, marginTop: 8 }}>{title}</Text>
+      {showTitle && <Text accessibilityRole="header" style={{ fontSize: 22, fontWeight: '800', color: C.ink, marginBottom: 4, marginTop: 8 }}>{title}</Text>}
       <Text style={[s.hint, { marginBottom: 12 }]}>Last updated {LEGAL_UPDATED}</Text>
       {sections.map(([h, b]) => (
         <Text key={h} style={{ marginBottom: 16 }}>
@@ -59,21 +61,27 @@ function Doc({ title, sections }: { title: string; sections: Section[] }) {
 export function TermsText({ only }: { only?: 'terms' | 'privacy' }) {
   return (
     <ScrollView contentContainerStyle={[s.pad, { paddingBottom: 40, maxWidth: 720, width: '100%', alignSelf: 'center' }]}>
-      {only !== 'privacy' && <Doc title="Terms of use" sections={TERMS} />}
-      {only !== 'terms' && <Doc title="Privacy policy" sections={PRIVACY} />}
+      {/* On the single-document pages the screen header already shows the title. */}
+      {only !== 'privacy' && <Doc title="Terms of use" sections={TERMS} showTitle={!only} />}
+      {only !== 'terms' && <Doc title="Privacy policy" sections={PRIVACY} showTitle={!only} />}
     </ScrollView>
   );
 }
 
 export function LegalScreen({ only }: { only: 'terms' | 'privacy' }) {
+  const title = only === 'terms' ? 'Terms of use' : 'Privacy policy';
   return (
     <SafeAreaView style={s.screen}>
-      <Header title={only === 'terms' ? 'Terms of use' : 'Privacy policy'} back />
+      <Head>
+        <title>{`${title} · ${BRAND.name}`}</title>
+        <meta name="description" content={only === 'terms' ? `The rules for buying and selling on ${BRAND.name}.` : `How ${BRAND.name} collects, uses and protects your personal data.`} />
+      </Head>
+      <Header title={title} back />
       <TermsText only={only} />
-      <Text style={[s.hint, { textAlign: 'center', padding: 12, color: C.accent, fontWeight: '600' }]}
-        onPress={() => router.replace(only === 'terms' ? '/privacy' : '/terms')}>
+      <Link href={only === 'terms' ? '/privacy' : '/terms'} replace
+        style={[s.hint, { textAlign: 'center', padding: 12, color: C.accent, fontWeight: '600' }]}>
         {only === 'terms' ? 'Read the privacy policy' : 'Read the terms of use'}
-      </Text>
+      </Link>
     </SafeAreaView>
   );
 }

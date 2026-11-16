@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -208,8 +208,8 @@ export default function SignIn() {
             <Wordmark size={20} light />
             <Text style={{ color: '#B9C3BE', fontSize: 13.5, lineHeight: 20, maxWidth: 460 }}>{BRAND.tagline}</Text>
             <View style={{ flexDirection: 'row', gap: 20, flexWrap: 'wrap' }}>
-              <Text style={{ color: C.surface, fontWeight: '600', fontSize: 13.5 }} onPress={() => router.push('/terms')}>Terms of use</Text>
-              <Text style={{ color: C.surface, fontWeight: '600', fontSize: 13.5 }} onPress={() => router.push('/privacy')}>Privacy policy</Text>
+              <Link href="/terms" style={{ color: C.surface, fontWeight: '600', fontSize: 13.5 }}>Terms of use</Link>
+              <Link href="/privacy" style={{ color: C.surface, fontWeight: '600', fontSize: 13.5 }}>Privacy policy</Link>
               <Text style={{ color: '#8E9893', fontSize: 13.5 }}>© {new Date().getFullYear()} {BRAND.name} · Made in {BRAND.city}</Text>
             </View>
           </View>

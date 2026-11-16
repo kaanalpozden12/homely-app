@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Linking, Platform, Pressable, ScrollView, Text, useWindowDimensions, View, type ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReportSheet } from '@/components/report-sheet';
@@ -32,6 +32,7 @@ export default function Item() {
   const [busy, setBusy] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [page, setPage] = useState(0);
+  const gallery = useRef<ScrollViewInstance>(null);
   const w = Math.min(useWindowDimensions().width, 560);
 
   const load = useCallback(async () => {
@@ -218,7 +219,7 @@ export default function Item() {
       <ScrollView>
         <View>
           {it.photos.length ? (
-            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+            <ScrollView ref={gallery} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / w))}
               onScroll={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / w))} scrollEventThrottle={64}>
               {it.photos.map((u) => <Image key={u} source={{ uri: u }} style={{ width: w, height: w * 0.92 }} contentFit="cover" />)}
@@ -229,6 +230,18 @@ export default function Item() {
               <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{page + 1} / {it.photos.length}</Text>
             </View>
           )}
+          {/* Arrows for computers, where you can't swipe through the photos. */}
+          {Platform.OS === 'web' && it.photos.length > 1 && ([['chevron-left', -1, 'Previous photo'], ['chevron-right', 1, 'Next photo']] as const).map(([icon, step, label]) => {
+            const to = page + step;
+            if (to < 0 || to >= it.photos.length) return null;
+            return (
+              <Pressable key={icon} accessibilityRole="button" accessibilityLabel={label}
+                onPress={() => { gallery.current?.scrollTo({ x: to * w, animated: true }); setPage(to); }}
+                style={[s.iconBtn, { position: 'absolute', top: (w * 0.92) / 2 - 20, [step < 0 ? 'left' : 'right']: 12, borderWidth: 0 }, shadow(1)]}>
+                <Icon name={icon} size={24} />
+              </Pressable>
+            );
+          })}
           <View style={{ position: 'absolute', left: 12, top: 12 }}><BackButton floating /></View>
         </View>
 
@@ -281,7 +294,7 @@ export default function Item() {
               </Note>
             </View>
             {!mine && (
-              <Pressable onPress={() => setReporting(true)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
+              <Pressable accessibilityRole="button" onPress={() => setReporting(true)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
                 <Icon name="flag-outline" size={17} color={C.muted} /><Text style={s.meta}>Report this listing</Text>
               </Pressable>
             )}

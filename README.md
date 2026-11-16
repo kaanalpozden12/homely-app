@@ -110,6 +110,9 @@ If an automatic refund fails, **transactions.refund_status** shows `failed`: ref
 - **Changing the name:** edit `src/lib/brand.ts` (name, logo text, tagline). Then also update `app.json` (name, slug, scheme),
   `public/index.html` (title and link previews), `public/manifest.json`, the terms and privacy text in
   `src/components/terms-text.tsx`, and the icons in `public/` and `assets/images/`.
+- Icons: [Material Community Icons](https://pictogrammers.com/library/mdi/), cut down to only the ones the app uses so the
+  website stays fast (12 KB instead of 1.3 MB). **After using a new icon**, run `pip install fonttools && python3 scripts/subset-icons.py`
+  and commit the updated `assets/fonts/loftrobin-icons.ttf` and `src/lib/icon-glyphs.json`, or the new icon shows as a blank box.
 - Before and after screenshots of the redesign: `docs/design/`.
 
 ## For developers
