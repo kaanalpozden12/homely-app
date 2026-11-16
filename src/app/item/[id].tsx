@@ -7,14 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ReportSheet } from '@/components/report-sheet';
 import { Avatar, BackButton, Button, Empty, Icon, LangTags, Loading, Note, Photo, Section, Tag, Verified, s, type IconName } from '@/components/ui';
 import {
-  cancelTransaction, completeTransaction, findListings, openConversation, openTransaction, removePhotos, reserve, startCheckout,
+  cancelTransaction, completeTransaction, findListings, myCredit, openConversation, openTransaction, removePhotos, reserve,
+  startBoost, startBoostCheckout, startCheckout,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { confirm, notify } from '@/lib/dialog';
 import { friendly } from '@/lib/errors';
 import { ago, distance, price } from '@/lib/format';
 import { useFilters } from '@/lib/location';
-import { fee, useSettings } from '@/lib/settings';
+import { fee, sellerShare, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/lib/brand';
 import { categoryIcon } from '@/lib/constants';
@@ -22,7 +23,7 @@ import { C, FONT, R, shadow } from '@/lib/theme';
 import type { Listing, Transaction } from '@/lib/types';
 
 export default function Item() {
-  const { id, paid } = useLocalSearchParams<{ id: string; paid?: string }>();
+  const { id, paid, boosted } = useLocalSearchParams<{ id: string; paid?: string; boosted?: string }>();
   const { session } = useAuth();
   const { filters } = useFilters();
   const settings = useSettings();
@@ -56,6 +57,17 @@ export default function Item() {
     }, 2000);
     return () => clearInterval(timer);
   }, [paid, load]);
+
+  // Back from paying for a Boost: same idea, wait for Stripe to tell our server.
+  useEffect(() => {
+    if (!boosted) return;
+    let n = 0;
+    const timer = setInterval(async () => {
+      await load();
+      if (++n >= 6) clearInterval(timer);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [boosted, load]);
 
   if (it === undefined) return <SafeAreaView style={s.screen}><Loading /></SafeAreaView>;
   if (it === null) return (
@@ -107,18 +119,40 @@ export default function Item() {
     router.canGoBack() ? router.back() : router.replace('/');
   };
 
-  const pay = async (t: Transaction) => {
-    const url = await startCheckout(t.id);
+  const openPayment = async (url: string) => {
     if (Platform.OS === 'web') window.location.assign(url);
     else await Linking.openURL(url);
+  };
+  const pay = async (t: Transaction) => openPayment(await startCheckout(t.id));
+
+  const doBoost = async () => {
+    const p = settings.boost_price_pence;
+    const days = `${settings.boost_days} ${settings.boost_days === 1 ? 'day' : 'days'}`;
+    const credit = await myCredit().catch(() => 0);
+    const useCredit = credit >= p;
+    const ok = await confirm(
+      `Boost for ${fee(p)}?`,
+      `Your item shows first in the feed and search for ${days}, marked "Boosted". ` +
+        (it.boosted ? 'The extra days are added to your current boost. ' : '') +
+        (useCredit ? `Paid from your ${BRAND.name} credit (you have ${fee(credit)}).` : 'You pay by card.'),
+      useCredit ? `Boost for ${fee(p)}` : 'Continue to payment',
+    );
+    if (!ok) return;
+    await run('Could not boost this item', async () => {
+      const b = await startBoost(it.id);
+      if (b.status === 'awaiting_payment') return openPayment(await startBoostCheckout(b.id));
+      notify('Boosted', `Your item is at the top of the feed and search for ${days}.`);
+    });
   };
 
   const doReserve = async () => {
     const f = settings.commission_pence;
+    const share = sellerShare(settings);
     const ok = await confirm(
       f ? `Reserve for ${fee(f)}?` : 'Reserve this item?',
       (f
-        ? `Pay a ${fee(f)} ${BRAND.name} fee by card and the item is held for you. `
+        ? `Pay a ${fee(f)} ${BRAND.name} fee by card and the item is held for you. ` +
+          (share ? `${fee(share)} of it goes to ${it.seller_name} for holding the item. ` : '')
         : `Reserving is free while ${BRAND.name} is new. The item is held for you. `) +
         `You pay ${price(it.price)} to ${it.seller_name} in person when you collect it.` +
         (f ? ' If the seller cancels, the fee is refunded.' : ''),
@@ -145,7 +179,7 @@ export default function Item() {
       'Cancel the reservation?',
       seller
         ? `The item goes back on sale.${paidFee ? ` The buyer's ${BRAND.name} fee is refunded.` : ''}`
-        : `The item goes back on sale for others.${paidFee ? ` The ${BRAND.name} fee is not refunded when the buyer cancels.` : ''}`,
+        : `The item goes back on sale for others.${paidFee ? ` The ${BRAND.name} fee is not refunded when the buyer cancels${tx.seller_share_pence ? ', and the seller keeps their share for holding it' : ''}.` : ''}`,
       'Cancel reservation', true,
     );
     if (ok) await run('Could not cancel the reservation', () => cancelTransaction(tx.id));
@@ -170,12 +204,22 @@ export default function Item() {
           )}
         </>
       );
+      const canBoost = settings.boosts_enabled && it.status === 'active';
       return (
-        <View style={row}>
-          <Button title={it.status === 'sold' ? 'Mark as available' : 'Mark as sold'} kind="ghost" style={{ flex: 1 }} busy={busy}
-            onPress={() => setStatus(it.status === 'sold' ? 'active' : 'sold')} />
-          <Button title="Delete" kind="danger" onPress={remove} disabled={busy} />
-        </View>
+        <>
+          {it.boosted && it.boosted_until && (
+            <Status icon="rocket-launch-outline" text={`Boosted until ${until(it.boosted_until)}. It shows first in the feed and search.`} />
+          )}
+          {canBoost && (
+            <Button title={`${it.boosted ? 'Boost again' : 'Boost'} · ${fee(settings.boost_price_pence)}`} icon="rocket-launch-outline"
+              kind="soft" onPress={doBoost} busy={busy} />
+          )}
+          <View style={row}>
+            <Button title={it.status === 'sold' ? 'Mark as available' : 'Mark as sold'} kind="ghost" style={{ flex: 1 }} busy={busy}
+              onPress={() => setStatus(it.status === 'sold' ? 'active' : 'sold')} />
+            <Button title="Delete" kind="danger" onPress={remove} disabled={busy} />
+          </View>
+        </>
       );
     }
     if (tx && tx.buyer_id === me) {
@@ -250,6 +294,7 @@ export default function Item() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {it.status === 'sold' && <Tag text="Sold" tone="dark" />}
               {it.status === 'reserved' && <Tag text="Reserved" icon="clock-outline" tone="gold" />}
+              {it.status === 'active' && it.boosted && <Tag text="Boosted" icon="rocket-launch-outline" tone="dark" />}
               <Tag text={it.condition} icon="star-outline" tone="accent" />
               <Tag text={it.category} icon={categoryIcon(it.category) as IconName} />
               <Tag text="Pickup only" icon="walk" />
@@ -309,6 +354,9 @@ export default function Item() {
     </SafeAreaView>
   );
 }
+
+const until = (iso: string) =>
+  new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 const Meta = ({ icon, text }: { icon: string; text: string }) => (
   <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>

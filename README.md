@@ -78,7 +78,8 @@ Until this is done, the "Continue with Google" button shows a message asking peo
 | Reports | **admin_open_reports**. A listing reported by 3 different people is hidden automatically. To hide a listing yourself tick **listings.hidden**; to un-hide, untick it. When done, set the report's **status** to `resolved` in **reports**. |
 | Ban someone | **profiles**: tick **banned**. Their listings disappear and they can no longer post, message or reserve. |
 | Require an ID check before selling (off by default) | **app_settings**: tick **require_id_to_sell**. Give trusted sellers an "ID verified" badge by ticking **profiles.id_verified**. |
-| Commission earned | **admin_commission_by_month**, or every reservation in **transactions**. |
+| Money earned | **admin_commission_by_month** (Reserve fees, seller credit given, Boosts), or every row in **transactions** and **boosts**. |
+| Give someone credit by hand | **credits**: insert a row with their user id, `amount_pence` (e.g. `100`), reason `admin`. |
 
 ## The commission (reservation fee)
 
@@ -89,8 +90,23 @@ table with the commission charged.
 - The fee is set in **app_settings > commission_pence**: `0` = free (launch), `150` = £1.50. No app update is needed.
 - Fee refunded automatically if the seller cancels. Not refunded if the buyer cancels.
 - A card payment page left unpaid for 30 minutes releases the item.
+- **Seller's share:** `app_settings > reserve_seller_percent` (default `50` = half). That part of the fee becomes the
+  seller's **Loftrobin credit** once the item is collected or the buyer cancels. If the seller cancels, the buyer gets
+  the whole fee back and the seller gets nothing. Credit can only be spent on Boosts (it is not cash), so sellers
+  don't need a Stripe account. Every credit and spend is a row in the **credits** table.
 
-### Before setting the fee above 0 (one-time Stripe setup)
+## Boosts (paid for by sellers)
+
+A seller taps **Boost** on their own item. It then shows first in the feed and in search (except "lowest price" sort) for a
+few days, with a "Boosted" label, but only to buyers whose filters and distance match. Boosting again adds more days.
+
+- `app_settings > boosts_enabled`: off by default. Tick it once Stripe is set up.
+- `app_settings > boost_price_pence`: `150` = £1.50 (Stripe's minimum is 30p). `boost_days`: `3`.
+- Paid from the seller's Loftrobin credit if they have enough, otherwise by card (Stripe).
+- If the item was sold or deleted before the card payment went through, the money is refunded automatically.
+  **boosts.status** `refund_failed` means: refund it in the Stripe dashboard and set it to `refunded`.
+
+### Before setting the fee above 0 or turning on Boosts (one-time Stripe setup)
 
 1. Create a [Stripe](https://dashboard.stripe.com/register) account (UK, individual / sole trader is fine) and finish its identity and bank checks.
 2. Stripe > **Developers > API keys**: copy the **Secret key**.

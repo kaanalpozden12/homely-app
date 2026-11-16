@@ -29,6 +29,8 @@ export type Listing = {
   seller_area: string;
   seller_languages: string[];
   seller_verified: boolean;
+  boosted: boolean;
+  boosted_until: string | null; // only for your own items
 };
 
 export type Message = {
@@ -50,10 +52,22 @@ export type Transaction = {
   item_title: string;
   item_price: number;
   commission_pence: number;
+  seller_share_pence: number;
   status: 'awaiting_payment' | 'reserved' | 'completed' | 'cancelled' | 'expired';
   cancelled_by: 'buyer' | 'seller' | 'admin' | 'system' | null;
   refund_status: 'none' | 'pending' | 'refunded' | 'failed';
   created_at: string;
   paid_at: string | null;
   reserved_at: string | null;
+};
+
+/** A Boost a seller started or paid for (the boosts table). */
+export type Boost = {
+  id: string;
+  listing_id: string | null;
+  price_pence: number;
+  days: number;
+  paid_with: 'card' | 'credit';
+  status: 'awaiting_payment' | 'paid' | 'expired' | 'refunded' | 'refund_failed';
+  ends_at: string | null;
 };
