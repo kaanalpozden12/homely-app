@@ -114,7 +114,7 @@ export async function cancelTransaction(id: string): Promise<Transaction> {
   return t;
 }
 
-/** Starts card payment of the Homely fee and returns the Stripe page to open. */
+/** Starts card payment of the Loftrobin fee and returns the Stripe page to open. */
 export async function startCheckout(transactionId: string): Promise<string> {
   const { url } = await callPaymentServer('checkout', { transaction_id: transactionId });
   return url as string;

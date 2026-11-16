@@ -1,5 +1,5 @@
 // POST /api/checkout { transaction_id } -> { url }
-// Opens a Stripe card payment page for the Homely fee of a reservation the buyer just made.
+// Opens a Stripe card payment page for the Loftrobin fee of a reservation the buyer just made.
 import { admin, currentUser, handle, HttpError, json, stripe } from './_shared';
 
 export const POST = handle(async (req) => {
@@ -25,7 +25,7 @@ export const POST = handle(async (req) => {
     'line_items[0][quantity]': '1',
     'line_items[0][price_data][currency]': 'gbp',
     'line_items[0][price_data][unit_amount]': String(t.commission_pence),
-    'line_items[0][price_data][product_data][name]': 'Homely reservation fee',
+    'line_items[0][price_data][product_data][name]': 'Loftrobin reservation fee',
     'line_items[0][price_data][product_data][description]':
       `Holds "${t.item_title}" for you. You pay the £${t.item_price} item price to the seller in person.`.slice(0, 500),
     client_reference_id: t.id,
