@@ -1,4 +1,4 @@
--- Homely database schema for Supabase.
+-- Loftrobin database schema for Supabase.
 -- Run this in the Supabase dashboard: SQL Editor > New query > paste everything > Run.
 -- It is safe to run again on an existing project: it only adds what is missing and
 -- recreates the functions, rules and triggers. No listings, chats or users are deleted.
@@ -112,7 +112,7 @@ create table if not exists public.app_settings (
 );
 insert into public.app_settings (id) values (1) on conflict (id) do nothing;
 
--- Every reservation and sale made through the app, with the commission Homely charged.
+-- Every reservation and sale made through the app, with the commission Loftrobin charged.
 create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid references public.listings (id) on delete set null,
@@ -121,7 +121,7 @@ create table if not exists public.transactions (
   seller_id uuid references public.profiles (id) on delete set null,
   item_title text not null,                       -- copied so records survive deleted listings
   item_price integer not null,                     -- whole pounds, paid to the seller in person
-  commission_pence integer not null default 0,     -- what Homely charged the buyer, 150 = £1.50
+  commission_pence integer not null default 0,     -- what Loftrobin charged the buyer, 150 = £1.50
   status text not null default 'awaiting_payment'
     check (status in ('awaiting_payment', 'reserved', 'completed', 'cancelled', 'expired')),
   cancelled_by text check (cancelled_by in ('buyer', 'seller', 'admin', 'system')),
@@ -478,7 +478,7 @@ declare
   conv uuid;
 begin
   if me is null then raise exception 'Please sign in first.'; end if;
-  if not is_active_user(me) then raise exception 'Your account cannot reserve items. Contact Homely for help.'; end if;
+  if not is_active_user(me) then raise exception 'Your account cannot reserve items. Contact Loftrobin for help.'; end if;
   select * into l from listings where id = p_listing for update;
   if not found or l.hidden then raise exception 'This item is no longer available.'; end if;
   if l.seller_id = me then raise exception 'This is your own item.'; end if;
@@ -527,7 +527,7 @@ begin
   update transactions set status = 'completed', completed_at = now() where id = p_tx returning * into t;
   update listings set status = 'sold' where id = t.listing_id;
   insert into messages (conversation_id, sender_id, kind, body)
-  values (t.conversation_id, t.seller_id, 'system', 'Collected. Thanks for using Homely!');
+  values (t.conversation_id, t.seller_id, 'system', 'Collected. Thanks for using Loftrobin!');
   return t;
 end $$;
 
@@ -552,7 +552,7 @@ begin
     insert into messages (conversation_id, sender_id, kind, body)
     values (t.conversation_id, auth.uid(), 'system',
       case when who = 'seller' then 'The seller cancelled the reservation.' else 'The buyer cancelled the reservation.' end
-      || case when t.refund_status = 'pending' then ' The Homely fee will be refunded to the buyer''s card.' else '' end);
+      || case when t.refund_status = 'pending' then ' The Loftrobin fee will be refunded to the buyer''s card.' else '' end);
   end if;
   return t;
 end $$;

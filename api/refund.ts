@@ -1,5 +1,5 @@
 // POST /api/refund { transaction_id }
-// Called by the app right after a seller cancels a paid reservation, to send the Homely fee back.
+// Called by the app right after a seller cancels a paid reservation, to send the Loftrobin fee back.
 import { admin, currentUser, handle, HttpError, json, refund } from './_shared';
 
 export const POST = handle(async (req) => {

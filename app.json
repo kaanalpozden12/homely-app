@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "Homely",
-    "slug": "homely",
+    "name": "Loftrobin",
+    "slug": "loftrobin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "homely",
+    "scheme": "loftrobin",
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "uk.homely.app",
+      "bundleIdentifier": "com.loftrobin.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Homely needs your photos so you can add pictures to your listings."
+        "NSPhotoLibraryUsageDescription": "Loftrobin needs your photos so you can add pictures to your listings."
       }
     },
     "android": {
@@ -22,13 +22,13 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "uk.homely.app"
+      "package": "com.loftrobin.app"
     },
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png",
-      "name": "Homely",
-      "shortName": "Homely",
+      "name": "Loftrobin",
+      "shortName": "Loftrobin",
       "themeColor": "#0F6B57",
       "backgroundColor": "#F7F5F0",
       "description": "Buy and sell second-hand furniture and household items in London, from neighbours who speak your language."
@@ -46,7 +46,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Homely needs your photos so you can add pictures to your listings."
+          "photosPermission": "Loftrobin needs your photos so you can add pictures to your listings."
         }
       ]
     ],

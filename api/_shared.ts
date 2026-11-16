@@ -65,7 +65,7 @@ export async function stripe<T = Record<string, any>>(
 
 type Tx = { id: string; stripe_payment_intent: string | null; refund_status: string; commission_pence: number };
 
-/** Sends the Homely fee back to the buyer's card and records the result. Safe to call twice. */
+/** Sends the Loftrobin fee back to the buyer's card and records the result. Safe to call twice. */
 export async function refund(db: SupabaseClient, t: Tx) {
   if (t.refund_status !== 'pending' || !t.stripe_payment_intent) return;
   try {

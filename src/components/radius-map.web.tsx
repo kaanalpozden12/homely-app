@@ -17,22 +17,22 @@ const METRES_PER_MILE = 1609.344;
 const PREVIEW_MILES = 3; // where the handle sits while "Any distance" is chosen
 
 const CSS = `
-.homely-map { background: ${C.sunken}; font-family: inherit; }
-.homely-map .leaflet-tile-pane { filter: saturate(0.6) brightness(1.03) contrast(0.96); }
-.homely-map .leaflet-control-attribution { font: 10px/1.4 system-ui, sans-serif; background: rgba(255,255,255,0.8); border-top-left-radius: 6px; }
-.homely-handle { touch-action: none; cursor: grab; }
-.homely-handle:active { cursor: grabbing; }
-.homely-handle > div { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2.5px solid ${C.accent};
+.lr-map { background: ${C.sunken}; font-family: inherit; }
+.lr-map .leaflet-tile-pane { filter: saturate(0.6) brightness(1.03) contrast(0.96); }
+.lr-map .leaflet-control-attribution { font: 10px/1.4 system-ui, sans-serif; background: rgba(255,255,255,0.8); border-top-left-radius: 6px; }
+.lr-handle { touch-action: none; cursor: grab; }
+.lr-handle:active { cursor: grabbing; }
+.lr-handle > div { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2.5px solid ${C.accent};
   box-shadow: 0 2px 8px rgba(22,32,28,0.25); display: flex; align-items: center; justify-content: center;
   color: ${C.accent}; font: 700 14px/1 system-ui, sans-serif; box-sizing: border-box; }
-.homely-dot > div { width: 16px; height: 16px; border-radius: 50%; background: ${C.accent}; border: 3px solid #fff;
+.lr-dot > div { width: 16px; height: 16px; border-radius: 50%; background: ${C.accent}; border: 3px solid #fff;
   box-shadow: 0 1px 4px rgba(22,32,28,0.35); box-sizing: border-box; }
 `;
 
 function injectCss() {
-  if (document.getElementById('homely-map-css')) return;
+  if (document.getElementById('lr-map-css')) return;
   const el = document.createElement('style');
-  el.id = 'homely-map-css';
+  el.id = 'lr-map-css';
   el.textContent = CSS;
   document.head.appendChild(el);
 }
@@ -63,7 +63,7 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
       dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false,
     });
     map.attributionControl.setPrefix(false);
-    el.classList.add('homely-map');
+    el.classList.add('lr-map');
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
@@ -71,10 +71,10 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
 
     const miles = radius ?? PREVIEW_MILES;
     const circle = L.circle(centre, { radius: miles * METRES_PER_MILE, color: C.accent, weight: 2, fillColor: C.accent, fillOpacity: 0.12, interactive: false }).addTo(map);
-    const dot = L.marker(centre, { icon: L.divIcon({ className: 'homely-dot', html: '<div></div>', iconSize: [16, 16] }), interactive: false, keyboard: false }).addTo(map);
+    const dot = L.marker(centre, { icon: L.divIcon({ className: 'lr-dot', html: '<div></div>', iconSize: [16, 16] }), interactive: false, keyboard: false }).addTo(map);
     const handle = L.marker(eastOf(centre, miles), {
       draggable: true, autoPan: false, keyboard: false, title: 'Drag to change the search area',
-      icon: L.divIcon({ className: 'homely-handle', html: '<div>&harr;</div>', iconSize: [30, 30] }),
+      icon: L.divIcon({ className: 'lr-handle', html: '<div>&harr;</div>', iconSize: [30, 30] }),
     }).addTo(map);
 
     const milesAt = (p: L.LatLng) => snapMiles(map.distance(circle.getLatLng(), p) / METRES_PER_MILE);

@@ -18,13 +18,13 @@ export const Icon = ({ name, size = 20, color = C.ink }: { name: IconName | stri
   <MaterialCommunityIcons name={name as IconName} size={size} color={color} />
 );
 
-/** The brand logo: a small house mark and the name. */
+/** The brand logo: a small robin mark and the name. */
 export function Wordmark({ size = 26, light }: { size?: number; light?: boolean }) {
   const mark = Math.round(size * 1.15);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: size * 0.32 }} accessibilityRole="header" accessibilityLabel={BRAND.name}>
       <View style={{ width: mark, height: mark, borderRadius: mark * 0.3, backgroundColor: light ? C.surface : C.accent, alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="home-outline" size={mark * 0.64} color={light ? C.accent : C.accentInk} />
+        <Icon name="bird" size={mark * 0.64} color={light ? C.accent : C.accentInk} />
       </View>
       <Text style={{ fontFamily: FONT, fontSize: size, fontWeight: '800', letterSpacing: -size * 0.03, color: light ? C.surface : C.ink }}>
         {BRAND.wordmark[0]}<Text style={{ color: light ? '#BFE3D6' : C.accent }}>{BRAND.wordmark[1]}</Text>

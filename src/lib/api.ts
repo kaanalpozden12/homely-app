@@ -114,14 +114,14 @@ export async function cancelTransaction(id: string): Promise<Transaction> {
   return t;
 }
 
-/** Starts card payment of the Homely fee and returns the Stripe page to open. */
+/** Starts card payment of the Loftrobin fee and returns the Stripe page to open. */
 export async function startCheckout(transactionId: string): Promise<string> {
   const { url } = await callPaymentServer('checkout', { transaction_id: transactionId });
   return url as string;
 }
 
 /** Where the web app is served from. The phone apps talk to the same server. */
-const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://homely-london.vercel.app';
+const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://www.loftrobin.com';
 
 async function callPaymentServer(path: string, body: object): Promise<Record<string, unknown>> {
   const { data } = await supabase.auth.getSession();
