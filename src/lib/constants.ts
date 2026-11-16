@@ -24,13 +24,7 @@ export const CATEGORIES: Category[] = [
 export const categoryIcon = (name: string) =>
   CATEGORIES.find((c) => c.name === name)?.icon ?? 'package-variant-closed';
 
-export const LANGUAGES: [string, string][] = [
-  ['Turkish', 'TR'], ['English', 'EN'], ['Polish', 'PL'], ['Spanish', 'ES'], ['Arabic', 'AR'],
-  ['Italian', 'IT'], ['Portuguese', 'PT'], ['Romanian', 'RO'], ['French', 'FR'], ['German', 'DE'],
-  ['Greek', 'EL'], ['Kurdish', 'KU'], ['Persian', 'FA'], ['Urdu', 'UR'], ['Hindi', 'HI'],
-  ['Bengali', 'BN'], ['Chinese', 'ZH'], ['Russian', 'RU'], ['Ukrainian', 'UK'], ['Bulgarian', 'BG'],
-];
-export const langCode = (l: string) => LANGUAGES.find((x) => x[0] === l)?.[1] ?? l.slice(0, 2).toUpperCase();
+export { langCode } from './languages';
 
 export const CONDITIONS = ['Like new', 'Very good', 'Good', 'Fair'];
 
