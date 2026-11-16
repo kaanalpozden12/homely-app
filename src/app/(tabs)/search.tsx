@@ -7,19 +7,20 @@ import { Button, Chip, Chips, Empty, Field, Header, ListingRow, Loading, Section
 import { findListings } from '@/lib/api';
 import { CATEGORIES, LANGUAGES, RADII } from '@/lib/constants';
 import { lookupPostcode } from '@/lib/geo';
-import { useFilters } from '@/lib/location';
+import { MAP_AREA, useFilters } from '@/lib/location';
 import { shadow } from '@/lib/theme';
 import type { Listing } from '@/lib/types';
 
 export default function Search() {
   const { filters, setFilters } = useFilters();
   const [q, setQ] = useState('');
-  const [pc, setPc] = useState(filters.label);
+  const postcodeText = filters.label === MAP_AREA ? '' : filters.label;
+  const [pc, setPc] = useState(postcodeText);
   const [pcError, setPcError] = useState('');
   const [pcBusy, setPcBusy] = useState(false);
   const [items, setItems] = useState<Listing[] | null>(null);
 
-  useEffect(() => setPc(filters.label), [filters.label]);
+  useEffect(() => setPc(postcodeText), [postcodeText]);
 
   useEffect(() => {
     let live = true;
@@ -40,7 +41,7 @@ export default function Search() {
     setPcBusy(false);
     if (!place) return setPcError("We couldn't find that postcode. Try the first part, like SW3 or SW11.");
     setPcError('');
-    setFilters({ label: place.label, lat: place.lat, lng: place.lng });
+    setFilters({ label: place.label, lat: place.lat, lng: place.lng, home: null });
   };
 
   const toggleLang = (l: string) =>
@@ -60,7 +61,13 @@ export default function Search() {
             </View>
             <Button title="Set" onPress={setPostcode} busy={pcBusy} kind="soft" />
           </View>
-          <RadiusMap lat={filters.lat} lng={filters.lng} radius={filters.radius} onChange={(radius) => setFilters({ radius })} />
+          <RadiusMap lat={filters.lat} lng={filters.lng} radius={filters.radius} onChange={(radius) => setFilters({ radius })}
+            onMove={(lat, lng) => setFilters({ lat, lng, label: MAP_AREA, home: filters.home ?? { label: filters.label, lat: filters.lat, lng: filters.lng } })} />
+          {filters.home ? (
+            <Chips wrap>
+              <Chip label={`Back to ${filters.home.label}`} icon="crosshairs-gps" onPress={() => setFilters({ ...filters.home!, home: null })} />
+            </Chips>
+          ) : null}
           <Chips wrap>
             {RADII.map((r) => <Chip key={r.label} label={r.value ? `Within ${r.label}` : 'Any distance'} on={filters.radius === r.value} onPress={() => setFilters({ radius: r.value })} />)}
           </Chips>
