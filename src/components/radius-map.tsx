@@ -7,6 +7,8 @@ export type RadiusMapProps = {
   /** Miles, or null for "any distance". */
   radius: number | null;
   onChange: (miles: number) => void;
+  /** The buyer dragged the circle to a new centre. */
+  onMove: (lat: number, lng: number) => void;
 };
 
 export function RadiusMap(_: RadiusMapProps) {

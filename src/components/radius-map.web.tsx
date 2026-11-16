@@ -11,7 +11,7 @@ import { Icon } from '@/components/ui';
 import { formatMiles, snapMiles } from '@/lib/miles';
 import { C, R, shadow } from '@/lib/theme';
 
-export type RadiusMapProps = { lat: number; lng: number; radius: number | null; onChange: (miles: number) => void };
+export type RadiusMapProps = { lat: number; lng: number; radius: number | null; onChange: (miles: number) => void; onMove: (lat: number, lng: number) => void };
 
 const METRES_PER_MILE = 1609.344;
 const PREVIEW_MILES = 3; // where the handle sits while "Any distance" is chosen
@@ -25,8 +25,10 @@ const CSS = `
 .lr-handle > div { width: 28px; height: 28px; border-radius: 50%; background: ${C.accent}; border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(22,32,28,0.25); display: flex; align-items: center; justify-content: center;
   color: #fff; font: 700 13px/1 system-ui, sans-serif; box-sizing: border-box; }
-.lr-dot > div { width: 12px; height: 12px; border-radius: 50%; background: ${C.accent}; border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(22,32,28,0.35); box-sizing: border-box; }
+.lr-dot { touch-action: none; cursor: move; }
+.lr-dot > div { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2.5px solid ${C.accent};
+  box-shadow: 0 2px 8px rgba(22,32,28,0.25); display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.lr-dot svg { width: 16px; height: 16px; fill: ${C.accent}; }
 `;
 
 function injectCss() {
@@ -41,11 +43,12 @@ function injectCss() {
 const eastOf = (c: L.LatLng, miles: number) =>
   L.latLng(c.lat, c.lng + (miles * METRES_PER_MILE) / (111320 * Math.cos((c.lat * Math.PI) / 180)));
 
-export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
+export function RadiusMap({ lat, lng, radius, onChange, onMove }: RadiusMapProps) {
   const box = useRef<HTMLElement | null>(null); // on the web a View is a <div>
   const parts = useRef<{ map: L.Map; circle: L.Circle; dot: L.Marker; handle: L.Marker } | null>(null);
   const onChangeRef = useRef(onChange);
-  useEffect(() => { onChangeRef.current = onChange; });
+  const onMoveRef = useRef(onMove);
+  useEffect(() => { onChangeRef.current = onChange; onMoveRef.current = onMove; });
   const [live, setLive] = useState<number | null>(null); // miles while dragging
 
   const shown = live ?? radius ?? PREVIEW_MILES;
@@ -71,7 +74,10 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
 
     const miles = radius ?? PREVIEW_MILES;
     const circle = L.circle(centre, { radius: miles * METRES_PER_MILE, color: C.accent, weight: 2, fillColor: C.accent, fillOpacity: 0.08, interactive: false }).addTo(map);
-    const dot = L.marker(centre, { icon: L.divIcon({ className: 'lr-dot', html: '<div></div>', iconSize: [12, 12] }), interactive: false, keyboard: false }).addTo(map);
+    const dot = L.marker(centre, {
+      draggable: true, autoPan: false, keyboard: false, title: 'Drag to move the search area',
+      icon: L.divIcon({ className: 'lr-dot', html: '<div><svg viewBox="0 0 24 24"><path d="M13 6v5h5V7.75L22.25 12 18 16.25V13h-5v5h3.25L12 22.25 7.75 18H11v-5H6v3.25L1.75 12 6 7.75V11h5V6H7.75L12 1.75 16.25 6z"/></svg></div>', iconSize: [30, 30] }),
+    }).addTo(map);
     const handle = L.marker(eastOf(centre, miles), {
       draggable: true, autoPan: false, keyboard: false, title: 'Drag to change the search area',
       icon: L.divIcon({ className: 'lr-handle', html: '<div>&harr;</div>', iconSize: [28, 28] }),
@@ -92,6 +98,17 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
       setLive(m);
     });
     handle.on('dragend', () => commit(milesAt(handle.getLatLng())));
+    // Moving the centre drags the whole circle (and its resize handle) to a new place.
+    dot.on('drag', () => {
+      const c = dot.getLatLng();
+      circle.setLatLng(c);
+      handle.setLatLng(eastOf(c, circle.getRadius() / METRES_PER_MILE));
+    });
+    dot.on('dragend', () => {
+      const c = dot.getLatLng();
+      map.fitBounds(circle.getBounds(), { padding: [34, 34], animate: true });
+      onMoveRef.current(c.lat, c.lng);
+    });
     map.on('click', (e: L.LeafletMouseEvent) => commit(milesAt(e.latlng)));
 
     map.fitBounds(circle.getBounds(), { padding: [34, 34], animate: false });
@@ -129,7 +146,7 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
         </View>
       </View>
       <Text style={{ fontSize: 12.5, color: C.muted, marginTop: 7 }}>
-        Drag the handle to change the area.
+        Drag the middle to move the circle, or the green handle to resize it.
       </Text>
     </View>
   );
