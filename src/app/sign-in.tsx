@@ -57,9 +57,12 @@ export default function SignIn() {
       } });
     setBusy(false);
     if (error) {
-      return setError(/rate limit|security purposes|seconds/i.test(error.message)
-        ? 'Please wait a minute before asking for another code.'
-        : friendly(error, 'We could not send the email. Check the address and try again.'));
+      if (/rate limit|security purposes|seconds/i.test(error.message)) return setError('Please wait a minute before asking for another code.');
+      // The email service itself failed (shown by Supabase as "Error sending ... email"): not the person's fault.
+      if (/error sending|smtp|unexpected_failure/i.test(error.message) || (error as { status?: number }).status === 500) {
+        return setError(`We couldn't send the email just now. Please try again in a few minutes${Platform.OS === 'web' && !inAppBrowser ? ', or continue with Google' : ''}.`);
+      }
+      return setError(friendly(error, 'We could not send the email. Check the address and try again.'));
     }
     setSent(true);
     setCode('');
