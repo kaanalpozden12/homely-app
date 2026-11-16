@@ -2,11 +2,11 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { LanguagePicker } from '@/components/language-picker';
 import { TermsLink } from '@/components/terms-modal';
-import { Button, Chip, Chips, Field, Icon, Label, s } from '@/components/ui';
+import { Button, Field, Icon, Label, s } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { BRAND } from '@/lib/brand';
-import { LANGUAGES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
 
@@ -35,7 +35,6 @@ export function ProfileForm({ isNew }: { isNew: boolean }) {
     });
   }, [uid]);
 
-  const toggle = (l: string) => setLangs((a) => (a.includes(l) ? a.filter((x) => x !== l) : [...a, l]));
 
   const save = async () => {
     const n = name.trim();
@@ -65,10 +64,8 @@ export function ProfileForm({ isNew }: { isNew: boolean }) {
       <Field label="Neighbourhood" value={area} onChangeText={setArea} placeholder="e.g. Chelsea" maxLength={40}
         hint="Shown on your profile. Never your street or address." />
       <Label style={{ marginTop: 0 }}>Languages I want to buy and sell in</Label>
-      <Chips wrap>
-        {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={langs.includes(l)} onPress={() => toggle(l)} />)}
-      </Chips>
-      <Text style={[s.hint, { marginTop: 8 }]}>Your feed shows items from people who speak these languages, and people looking for these languages can find your items. You can change it any time.</Text>
+      <LanguagePicker selected={langs} onChange={setLangs} popular={12} />
+      <Text style={[s.hint, { marginTop: 4 }]}>Pick as many as you like. Your feed shows items from people who speak these languages, and people looking for these languages can find your items. You can change it any time.</Text>
       <Label>Contact details (optional)</Label>
       <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="07700 900000" keyboardType="phone-pad" autoComplete="tel" maxLength={30} />
       <Field label="Instagram" value={insta} onChangeText={setInsta} placeholder="@yourname" autoCapitalize="none" maxLength={40}

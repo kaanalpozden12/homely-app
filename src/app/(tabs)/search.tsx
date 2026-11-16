@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LanguagePicker } from '@/components/language-picker';
 import { RadiusMap } from '@/components/radius-map';
 import { Button, Chip, Chips, Empty, Field, Header, ListingRow, Loading, Section, s, type IconName } from '@/components/ui';
 import { findListings } from '@/lib/api';
-import { CATEGORIES, LANGUAGES, RADII } from '@/lib/constants';
+import { CATEGORIES, RADII } from '@/lib/constants';
 import { lookupPostcode } from '@/lib/geo';
 import { useFilters } from '@/lib/location';
 import { shadow } from '@/lib/theme';
@@ -43,9 +44,6 @@ export default function Search() {
     setFilters({ label: place.label, lat: place.lat, lng: place.lng });
   };
 
-  const toggleLang = (l: string) =>
-    setFilters({ languages: filters.languages.includes(l) ? filters.languages.filter((x) => x !== l) : [...filters.languages, l] });
-
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <Header title="Search" />
@@ -65,11 +63,8 @@ export default function Search() {
             {RADII.map((r) => <Chip key={r.label} label={r.value ? `Within ${r.label}` : 'Any distance'} on={filters.radius === r.value} onPress={() => setFilters({ radius: r.value })} />)}
           </Chips>
         </Section>
-        <Section title="Seller speaks" sub="Pick one or more. You'll see items from people who speak them.">
-          <Chips wrap>
-            <Chip label="Any language" on={!filters.languages.length} onPress={() => setFilters({ languages: [] })} />
-            {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={filters.languages.includes(l)} onPress={() => toggleLang(l)} />)}
-          </Chips>
+        <Section title="Seller speaks" sub="Pick one or more, or type to find any language. You'll see items from people who speak them.">
+          <LanguagePicker selected={filters.languages} onChange={(languages) => setFilters({ languages })} anyLabel="Any language" popular={12} />
         </Section>
         <Section title="Category">
           <Chips wrap>
