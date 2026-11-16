@@ -130,7 +130,7 @@ export default function Sell() {
                 </View>
               ))}
               {photos.length < MAX_PHOTOS && (
-                <Pressable onPress={pick} style={{ width: 92, height: 92, borderRadius: R.md, borderWidth: 1.5, borderStyle: 'dashed',
+                <Pressable onPress={pick} accessibilityRole="button" accessibilityLabel={photos.length ? 'Add more photos' : 'Add photos'} style={{ width: 92, height: 92, borderRadius: R.md, borderWidth: 1.5, borderStyle: 'dashed',
                   borderColor: C.accent, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                   <Icon name="camera-plus-outline" size={26} color={C.accent} />
                   <Text style={{ fontSize: 12, color: C.accentDark, fontWeight: '700' }}>{photos.length ? 'Add more' : 'Add photos'}</Text>

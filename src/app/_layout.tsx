@@ -1,4 +1,5 @@
 import { Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -61,12 +62,15 @@ export default function RootLayout() {
   const framed = !landing && width > 600;
   return (
     <SafeAreaProvider>
+      {/* Default browser tab title; pages such as the terms set their own. */}
+      <Head><title>{`${BRAND.name} · Second-hand finds from ${BRAND.city} neighbours`}</title></Head>
       <AuthProvider>
         <FiltersProvider>
           <StatusBar style="dark" />
           <View style={{ flex: 1, backgroundColor: framed ? C.sunken : C.bg }}>
             <View style={[{ flex: 1, width: '100%', maxWidth: landing ? undefined : 560, alignSelf: 'center', backgroundColor: C.bg },
-              framed && { borderLeftWidth: 1, borderRightWidth: 1, borderColor: C.line }]}>
+              // A hairline drawn outside the frame (not a border) so the screens inside keep their full 560px width.
+              framed && ({ boxShadow: `0 0 0 1px ${C.line}` } as object)]}>
               <Routes />
               <TermsModal />
               <CookieNotice />

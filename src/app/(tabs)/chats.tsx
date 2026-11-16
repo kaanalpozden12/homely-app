@@ -55,7 +55,8 @@ export default function Chats() {
             const o = other(c, me);
             const unread = isUnread(c, me);
             return (
-              <Pressable onPress={() => router.push(`/chat/${c.id}`)}
+              <Pressable onPress={() => router.push(`/chat/${c.id}`)} accessibilityRole="link"
+                accessibilityLabel={`Chat with ${o.name ?? 'someone'} about ${c.listing?.title ?? 'a removed listing'}${unread ? ', unread' : ''}`}
                 style={({ pressed }) => [{ flexDirection: 'row', gap: 12, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center',
                   backgroundColor: unread ? C.surface : 'transparent', borderBottomWidth: 1, borderBottomColor: C.line }, pressed && { opacity: 0.8 }]}>
                 <View>
