@@ -9,6 +9,8 @@ export type Filters = {
   lat: number;
   lng: number;
   radius: number | null; // miles, null = any distance
+  /** Set while the buyer has dragged the search circle away from their postcode: the postcode to go back to. */
+  home?: { label: string; lat: number; lng: number } | null;
   languages: string[];
   category: string | null; // null = all, "Free" = price 0
   sort: 'near' | 'new' | 'cheap';
@@ -59,5 +61,8 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 
   return <Ctx.Provider value={{ filters, setFilters }}>{children}</Ctx.Provider>;
 }
+
+/** Label shown once the buyer drags the search circle away from their postcode. */
+export const MAP_AREA = 'Map area';
 
 export const useFilters = () => useContext(Ctx);
