@@ -94,7 +94,7 @@ table with the commission charged.
 
 1. Create a [Stripe](https://dashboard.stripe.com/register) account (UK, individual / sole trader is fine) and finish its identity and bank checks.
 2. Stripe > **Developers > API keys**: copy the **Secret key**.
-3. Stripe > **Developers > Webhooks > Add endpoint**: URL `https://homely-london.vercel.app/api/stripe-webhook`, events
+3. Stripe > **Developers > Webhooks > Add endpoint**: URL `https://www.loftrobin.com/api/stripe-webhook`, events
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`. Copy the **Signing secret**.
 4. Supabase > **Project Settings > API keys**: copy the **secret** (service_role) key. Never share it or put it in the app.
 5. Vercel > homely project > **Settings > Environment Variables**, add `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
