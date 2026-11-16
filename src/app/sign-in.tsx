@@ -82,7 +82,7 @@ export default function SignIn() {
     <View style={[s.card, { padding: 20, borderRadius: R.xl }, shadow(2), wide && { width: 400 }]}>
       <Text style={s.h2}>{sent ? 'Check your email' : 'Join for free'}</Text>
       <Text style={[s.hint, { fontSize: 13.5, marginTop: 4, marginBottom: 18 }]}>
-        {sent ? 'Enter the 6-digit code we just sent you.' : 'Sign in or create an account in seconds. No password needed.'}
+        {sent ? 'Enter the code from the email we just sent you.' : 'Sign in or create an account in seconds. No password needed.'}
       </Text>
       {!sent && Platform.OS === 'web' ? (
         inAppBrowser ? (
@@ -116,7 +116,7 @@ export default function SignIn() {
             <Icon name="email-check-outline" color={C.accent} />
             <Text style={{ flex: 1, color: C.muted, lineHeight: 19 }}>Sent to <Text style={{ fontWeight: '700', color: C.ink }}>{email}</Text>. Can't see it? Check your spam or junk folder.</Text>
           </View>
-          <Field label="Code" value={code} onChangeText={setCode} placeholder="123456" keyboardType="number-pad" icon="lock-outline"
+          <Field label="Code" value={code} onChangeText={setCode} placeholder="12345678" keyboardType="number-pad" icon="lock-outline"
             autoComplete="one-time-code" maxLength={8} onSubmitEditing={verify} error={error} />
           <Button title="Sign in" onPress={verify} busy={busy} disabled={code.trim().length < 6} />
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
