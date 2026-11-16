@@ -45,7 +45,7 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
   const box = useRef<HTMLElement | null>(null); // on the web a View is a <div>
   const parts = useRef<{ map: L.Map; circle: L.Circle; dot: L.Marker; handle: L.Marker } | null>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => { onChangeRef.current = onChange; });
   const [live, setLive] = useState<number | null>(null); // miles while dragging
 
   const shown = live ?? radius ?? PREVIEW_MILES;
