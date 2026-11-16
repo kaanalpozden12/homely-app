@@ -30,7 +30,7 @@ the first half of the postcode (like SW3) and a distance rounded to the nearest 
 3. Open **Authentication > Emails > Templates > Magic link** (sometimes called "Magic Link or OTP").
    Replace the message with something like:
    `Your Loftrobin sign-in code is {{ .Token }}`
-   The app asks for this 6-digit code.
+   The app asks for this code (8 digits).
 4. **Important for real users:** Supabase's built-in email only reaches your own team's addresses.
    Before inviting friends, connect a free email sender: create a free [Resend](https://resend.com) account,
    then fill in **Authentication > Emails > SMTP settings** with Resend's SMTP details.
