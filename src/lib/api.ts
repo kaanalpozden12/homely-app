@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { readPhoto } from './image';
 import type { Filters } from './location';
 import { PHOTO_BUCKET, supabase } from './supabase';
-import type { Listing, Transaction } from './types';
+import type { Boost, Listing, Transaction } from './types';
 
 export async function findListings(
   f: Pick<Filters, 'lat' | 'lng'> & Partial<Filters> & { query?: string; seller?: string; id?: string; includeSold?: boolean },
@@ -118,6 +118,28 @@ export async function cancelTransaction(id: string): Promise<Transaction> {
 export async function startCheckout(transactionId: string): Promise<string> {
   const { url } = await callPaymentServer('checkout', { transaction_id: transactionId });
   return url as string;
+}
+
+// ---------- Boosts and Loftrobin credit ----------
+
+/** Boosts the item: paid from Loftrobin credit straight away if there is enough, otherwise status 'awaiting_payment'. */
+export async function startBoost(listingId: string): Promise<Boost> {
+  const { data, error } = await supabase.rpc('start_boost', { p_listing: listingId });
+  if (error) throw error;
+  return data as Boost;
+}
+
+/** Starts card payment of a Boost and returns the Stripe page to open. */
+export async function startBoostCheckout(boostId: string): Promise<string> {
+  const { url } = await callPaymentServer('boost-checkout', { boost_id: boostId });
+  return url as string;
+}
+
+/** The signed-in person's Loftrobin credit, in pence. */
+export async function myCredit(): Promise<number> {
+  const { data, error } = await supabase.rpc('my_credit_pence');
+  if (error) throw error;
+  return (data as number) ?? 0;
 }
 
 /** Where the web app is served from. The phone apps talk to the same server. */
