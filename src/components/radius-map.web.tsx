@@ -18,14 +18,14 @@ const PREVIEW_MILES = 3; // where the handle sits while "Any distance" is chosen
 
 const CSS = `
 .lr-map { background: ${C.sunken}; font-family: inherit; }
-.lr-map .leaflet-tile-pane { filter: saturate(0.6) brightness(1.03) contrast(0.96); }
+.lr-map .leaflet-tile-pane { filter: grayscale(1) sepia(0.12) contrast(0.42) brightness(1.3); }
 .lr-map .leaflet-control-attribution { font: 10px/1.4 system-ui, sans-serif; background: rgba(255,255,255,0.8); border-top-left-radius: 6px; }
 .lr-handle { touch-action: none; cursor: grab; }
 .lr-handle:active { cursor: grabbing; }
-.lr-handle > div { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2.5px solid ${C.accent};
+.lr-handle > div { width: 28px; height: 28px; border-radius: 50%; background: ${C.accent}; border: 3px solid #fff;
   box-shadow: 0 2px 8px rgba(22,32,28,0.25); display: flex; align-items: center; justify-content: center;
-  color: ${C.accent}; font: 700 14px/1 system-ui, sans-serif; box-sizing: border-box; }
-.lr-dot > div { width: 16px; height: 16px; border-radius: 50%; background: ${C.accent}; border: 3px solid #fff;
+  color: #fff; font: 700 13px/1 system-ui, sans-serif; box-sizing: border-box; }
+.lr-dot > div { width: 12px; height: 12px; border-radius: 50%; background: ${C.accent}; border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(22,32,28,0.35); box-sizing: border-box; }
 `;
 
@@ -70,11 +70,11 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
     }).addTo(map);
 
     const miles = radius ?? PREVIEW_MILES;
-    const circle = L.circle(centre, { radius: miles * METRES_PER_MILE, color: C.accent, weight: 2, fillColor: C.accent, fillOpacity: 0.12, interactive: false }).addTo(map);
-    const dot = L.marker(centre, { icon: L.divIcon({ className: 'lr-dot', html: '<div></div>', iconSize: [16, 16] }), interactive: false, keyboard: false }).addTo(map);
+    const circle = L.circle(centre, { radius: miles * METRES_PER_MILE, color: C.accent, weight: 2, fillColor: C.accent, fillOpacity: 0.08, interactive: false }).addTo(map);
+    const dot = L.marker(centre, { icon: L.divIcon({ className: 'lr-dot', html: '<div></div>', iconSize: [12, 12] }), interactive: false, keyboard: false }).addTo(map);
     const handle = L.marker(eastOf(centre, miles), {
       draggable: true, autoPan: false, keyboard: false, title: 'Drag to change the search area',
-      icon: L.divIcon({ className: 'lr-handle', html: '<div>&harr;</div>', iconSize: [30, 30] }),
+      icon: L.divIcon({ className: 'lr-handle', html: '<div>&harr;</div>', iconSize: [28, 28] }),
     }).addTo(map);
 
     const milesAt = (p: L.LatLng) => snapMiles(map.distance(circle.getLatLng(), p) / METRES_PER_MILE);
@@ -110,7 +110,7 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
     const centre = L.latLng(lat, lng);
     const miles = radius ?? PREVIEW_MILES;
     p.circle.setLatLng(centre).setRadius(miles * METRES_PER_MILE);
-    p.circle.setStyle({ dashArray: radius === null ? '6 6' : undefined, fillOpacity: radius === null ? 0.04 : 0.12 });
+    p.circle.setStyle({ dashArray: radius === null ? '6 6' : undefined, fillOpacity: radius === null ? 0.03 : 0.08 });
     p.dot.setLatLng(centre);
     p.handle.setLatLng(eastOf(centre, miles));
     p.map.fitBounds(p.circle.getBounds(), { padding: [34, 34], animate: true });
@@ -129,7 +129,7 @@ export function RadiusMap({ lat, lng, radius, onChange }: RadiusMapProps) {
         </View>
       </View>
       <Text style={{ fontSize: 12.5, color: C.muted, marginTop: 7 }}>
-        Drag the white handle to make the circle bigger or smaller, or tap the map.
+        Drag the handle to change the area.
       </Text>
     </View>
   );
