@@ -4,9 +4,9 @@
 
 export const BRAND = {
   /** The name people see, e.g. in buttons and messages. */
-  name: 'Homely',
+  name: 'Loftrobin',
   /** The logo text, split so the second part can be shown in the accent colour. */
-  wordmark: ['home', 'ly'] as const,
-  tagline: 'Pre-loved home items from London neighbours who speak your language.',
+  wordmark: ['loft', 'robin'] as const,
+  tagline: 'Pre-loved finds from London neighbours who speak your language.',
   city: 'London',
 };

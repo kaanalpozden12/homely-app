@@ -9,7 +9,7 @@ import { C, R, shadow } from '@/lib/theme';
 
 const KEY = 'homely.cookie-notice.v1';
 
-/** One-time note on the website: Homely only stores what it needs to work (no tracking), so no consent is required. */
+/** One-time note on the website: Loftrobin only stores what it needs to work (no tracking), so no consent is required. */
 export function CookieNotice() {
   const [show, setShow] = useState(false);
   useEffect(() => {

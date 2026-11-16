@@ -1,4 +1,4 @@
-# Homely
+# Loftrobin
 
 A simple second-hand marketplace for London. Neighbours sell furniture and household items to each other,
 filter sellers by the languages they speak, chat, and meet to pick up and pay in person.
@@ -29,7 +29,7 @@ the first half of the postcode (like SW3) and a distance rounded to the nearest 
 2. Open **SQL Editor**, click **New query**, paste everything from [`supabase/schema.sql`](supabase/schema.sql), and click **Run**.
 3. Open **Authentication > Emails > Templates > Magic link** (sometimes called "Magic Link or OTP").
    Replace the message with something like:
-   `Your Homely sign-in code is {{ .Token }}`
+   `Your Loftrobin sign-in code is {{ .Token }}`
    The app asks for this 6-digit code.
 4. **Important for real users:** Supabase's built-in email only reaches your own team's addresses.
    Before inviting friends, connect a free email sender: create a free [Resend](https://resend.com) account,
@@ -63,14 +63,14 @@ It is safe to run again: it keeps all users, listings and chats.
 ### 5. Google sign-in (one-time)
 
 1. [Google Cloud Console](https://console.cloud.google.com) > new project "Homely" > **APIs & Services > OAuth consent screen**:
-   External, app name Homely, your email, then **Publish app**.
+   External, app name Loftrobin, your email, then **Publish app**.
 2. **Credentials > Create credentials > OAuth client ID**: type **Web application**. Under **Authorized redirect URIs** add
    `https://onukvcqeocqfvyojodzy.supabase.co/auth/v1/callback`. Copy the **Client ID** and **Client secret**.
 3. Supabase > **Authentication > Sign In / Providers > Google**: switch on, paste both, **Save**.
 
 Until this is done, the "Continue with Google" button shows a message asking people to use their email.
 
-## Running Homely day to day (all in Supabase > Table Editor)
+## Running Loftrobin day to day (all in Supabase > Table Editor)
 
 | Task | Where |
 | --- | --- |
