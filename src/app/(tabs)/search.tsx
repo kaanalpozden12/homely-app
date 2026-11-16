@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RadiusMap } from '@/components/radius-map';
 import { Button, Chip, Chips, Empty, Field, Header, ListingRow, Loading, Section, s, type IconName } from '@/components/ui';
 import { findListings } from '@/lib/api';
 import { CATEGORIES, LANGUAGES, RADII } from '@/lib/constants';
@@ -59,6 +60,7 @@ export default function Search() {
             </View>
             <Button title="Set" onPress={setPostcode} busy={pcBusy} kind="soft" />
           </View>
+          <RadiusMap lat={filters.lat} lng={filters.lng} radius={filters.radius} onChange={(radius) => setFilters({ radius })} />
           <Chips wrap>
             {RADII.map((r) => <Chip key={r.label} label={r.value ? `Within ${r.label}` : 'Any distance'} on={filters.radius === r.value} onPress={() => setFilters({ radius: r.value })} />)}
           </Chips>

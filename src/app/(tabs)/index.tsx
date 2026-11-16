@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CardSkeletons, Chip, Empty, Icon, ListingCard, Wordmark, s } from '@/components/ui';
 import { findListings } from '@/lib/api';
+import { formatMiles } from '@/lib/miles';
 import { CATEGORIES, LANGUAGES } from '@/lib/constants';
 import { useFilters } from '@/lib/location';
 import { C, shadow } from '@/lib/theme';
@@ -42,7 +43,7 @@ export default function Feed() {
         <Pressable onPress={() => router.navigate('/search')} accessibilityLabel="Change location and distance"
           style={[s.chip, { paddingVertical: 7 }]}>
           <Icon name="map-marker" size={16} color={C.accent} />
-          <Text style={s.chipText}>{filters.label} · {filters.radius ? `${filters.radius} mi` : 'any distance'}</Text>
+          <Text style={s.chipText}>{filters.label} · {filters.radius ? formatMiles(filters.radius) : 'any distance'}</Text>
           <Icon name="chevron-down" size={16} color={C.muted} />
         </Pressable>
       </View>
