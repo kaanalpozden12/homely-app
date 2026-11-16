@@ -3,10 +3,12 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LanguagePicker, MoreLanguagesChip } from '@/components/language-picker';
 import { CardSkeletons, Chip, Empty, Icon, ListingCard, Wordmark, s } from '@/components/ui';
 import { findListings } from '@/lib/api';
 import { formatMiles } from '@/lib/miles';
-import { CATEGORIES, LANGUAGES } from '@/lib/constants';
+import { CATEGORIES } from '@/lib/constants';
+import { POPULAR_LANGUAGES, langCode } from '@/lib/languages';
 import { useFilters } from '@/lib/location';
 import { C, shadow } from '@/lib/theme';
 import type { Listing } from '@/lib/types';
@@ -35,6 +37,8 @@ export default function Feed() {
   const toggleLang = (l: string) =>
     setFilters({ languages: filters.languages.includes(l) ? filters.languages.filter((x) => x !== l) : [...filters.languages, l] });
   const cat = filters.category ?? 'All';
+  const [langOpen, setLangOpen] = useState(false);
+  const quickLangs = POPULAR_LANGUAGES.filter((l) => !filters.languages.includes(l)).slice(0, 5);
 
   const header = (
     <View>
@@ -70,8 +74,15 @@ export default function Feed() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' }}>
         <Icon name="translate" size={18} color={C.muted} />
         <Chip label="Any language" on={!filters.languages.length} onPress={() => setFilters({ languages: [] })} />
-        {LANGUAGES.map(([l, c]) => <Chip key={l} label={l} sub={c} on={filters.languages.includes(l)} onPress={() => toggleLang(l)} />)}
+        {filters.languages.map((l) => <Chip key={l} label={l} sub={langCode(l)} on onPress={() => toggleLang(l)} />)}
+        {quickLangs.map((l) => <Chip key={l} label={l} sub={langCode(l)} onPress={() => toggleLang(l)} />)}
+        <MoreLanguagesChip open={langOpen} onPress={() => setLangOpen(!langOpen)} />
       </ScrollView>
+      {langOpen && (
+        <View style={[s.card, { marginHorizontal: 16, marginTop: 4, padding: 14 }]}>
+          <LanguagePicker selected={filters.languages} onChange={(languages) => setFilters({ languages })} hideSelected autoFocus />
+        </View>
+      )}
       <View style={[s.pad, { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12, gap: 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.h2}>{cat === 'All' ? `Near ${filters.label}` : cat}</Text>
