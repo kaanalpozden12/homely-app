@@ -49,6 +49,8 @@ alter table public.listings drop constraint if exists listings_status_check;
 alter table public.listings add constraint listings_status_check check (status in ('active', 'reserved', 'sold'));
 alter table public.listings drop constraint if exists listings_photos_check;
 alter table public.listings add constraint listings_photos_check check (cardinality(photos) <= 5);
+-- Set by the database when a Boost is paid for. While it is in the future the item shows first in the feed and search.
+alter table public.listings add column if not exists boosted_until timestamptz;
 create index if not exists listings_status_created on public.listings (status, created_at desc);
 create index if not exists listings_seller on public.listings (seller_id, created_at desc);
 create index if not exists listings_lat on public.listings (lat);
@@ -111,6 +113,17 @@ create table if not exists public.app_settings (
   updated_at timestamptz not null default now()
 );
 insert into public.app_settings (id) values (1) on conflict (id) do nothing;
+-- Share of the Reserve fee (commission_pence) that goes to the seller as Loftrobin credit, for holding the item.
+-- 50 = half. 0 = Loftrobin keeps it all. Only reservations made after a change use the new value.
+alter table public.app_settings add column if not exists reserve_seller_percent integer not null default 50
+  check (reserve_seller_percent between 0 and 100);
+-- Boosts: a seller pays to put a listing at the top of the feed and search for a few days.
+-- Off until card payments (Stripe) are set up. Price in pence: 150 = £1.50 (Stripe's minimum is 30p).
+alter table public.app_settings add column if not exists boosts_enabled boolean not null default false;
+alter table public.app_settings add column if not exists boost_price_pence integer not null default 150
+  check (boost_price_pence between 30 and 5000);
+alter table public.app_settings add column if not exists boost_days integer not null default 3
+  check (boost_days between 1 and 30);
 
 -- Every reservation and sale made through the app, with the commission Loftrobin charged.
 create table if not exists public.transactions (
@@ -139,6 +152,46 @@ create unique index if not exists transactions_one_open on public.transactions (
   where status in ('awaiting_payment', 'reserved');
 create index if not exists transactions_buyer on public.transactions (buyer_id, created_at desc);
 create index if not exists transactions_seller on public.transactions (seller_id, created_at desc);
+-- The seller's part of the Reserve fee (pence), fixed when the buyer reserves. It is added to the seller's
+-- Loftrobin credit once the item is collected or the buyer cancels. Nothing if the seller cancels (the buyer is refunded).
+alter table public.transactions add column if not exists seller_share_pence integer not null default 0;
+alter table public.transactions add column if not exists seller_credited_at timestamptz;
+
+-- Every Boost a seller bought.
+create table if not exists public.boosts (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid references public.listings (id) on delete set null,
+  seller_id uuid references public.profiles (id) on delete set null,
+  item_title text not null,
+  price_pence integer not null,
+  days integer not null,
+  paid_with text not null default 'card' check (paid_with in ('card', 'credit')),
+  status text not null default 'awaiting_payment'
+    check (status in ('awaiting_payment', 'paid', 'expired', 'refunded', 'refund_failed')),
+  stripe_session_id text unique,
+  stripe_payment_intent text,
+  created_at timestamptz not null default now(),
+  paid_at timestamptz,
+  ends_at timestamptz
+);
+create index if not exists boosts_seller on public.boosts (seller_id, created_at desc);
+create index if not exists boosts_listing on public.boosts (listing_id);
+
+-- Loftrobin credit: plus = earned (the seller's share of a Reserve fee), minus = spent (on Boosts).
+-- A person's balance is the sum of their rows. Credit can only be spent in the app; it is not money and cannot be cashed out.
+create table if not exists public.credits (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  amount_pence integer not null check (amount_pence <> 0),
+  reason text not null check (reason in ('reserve_share', 'boost', 'admin')),
+  transaction_id uuid references public.transactions (id) on delete set null,
+  boost_id uuid references public.boosts (id) on delete set null,
+  note text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists credits_user on public.credits (user_id, created_at desc);
+-- A reservation can only pay the seller's share once.
+create unique index if not exists credits_one_share on public.credits (transaction_id) where reason = 'reserve_share';
 
 -- ---------- Helpers ----------
 
@@ -166,7 +219,8 @@ $$;
 -- Row level security (below) then limits which rows each person can see or change.
 grant usage on schema public to anon, authenticated;
 revoke all on public.profiles, public.profile_contacts, public.listings, public.conversations,
-  public.messages, public.blocks, public.reports, public.app_settings, public.transactions from anon;
+  public.messages, public.blocks, public.reports, public.app_settings, public.transactions,
+  public.boosts, public.credits from anon;
 grant select on public.profiles to authenticated;
 grant select, insert, update, delete on public.profile_contacts to authenticated;
 grant delete on public.listings to authenticated;
@@ -175,6 +229,7 @@ grant select, insert on public.messages to authenticated;
 grant select, insert, update, delete on public.blocks to authenticated;
 grant select on public.app_settings to anon, authenticated;
 grant select on public.transactions to authenticated;
+grant select on public.boosts, public.credits to authenticated;
 grant usage on all sequences in schema public to authenticated;
 -- Only these columns can be filled in by the app; everything else is set by the database or an admin.
 revoke insert, update on public.listings from authenticated;
@@ -184,7 +239,7 @@ grant update (title, price, category, condition, description, hygiene, area, lat
   on public.listings to authenticated;
 revoke insert, update on public.reports from authenticated;
 grant insert (reporter_id, listing_id, reported_user_id, reason) on public.reports to authenticated;
-revoke insert, update, delete on public.app_settings, public.transactions from authenticated;
+revoke insert, update, delete on public.app_settings, public.transactions, public.boosts, public.credits from authenticated;
 
 -- ---------- Row level security ----------
 
@@ -197,6 +252,8 @@ alter table public.blocks enable row level security;
 alter table public.reports enable row level security;
 alter table public.app_settings enable row level security;
 alter table public.transactions enable row level security;
+alter table public.boosts enable row level security;
+alter table public.credits enable row level security;
 
 drop policy if exists "profiles readable by signed-in users" on public.profiles;
 create policy "profiles readable by signed-in users" on public.profiles
@@ -274,6 +331,14 @@ create policy "settings readable" on public.app_settings for select to anon, aut
 drop policy if exists "participants read transactions" on public.transactions;
 create policy "participants read transactions" on public.transactions
   for select to authenticated using (auth.uid() in (buyer_id, seller_id));
+
+drop policy if exists "sellers read own boosts" on public.boosts;
+create policy "sellers read own boosts" on public.boosts
+  for select to authenticated using (seller_id = auth.uid());
+
+drop policy if exists "read own credit" on public.credits;
+create policy "read own credit" on public.credits
+  for select to authenticated using (user_id = auth.uid());
 
 -- ---------- Triggers ----------
 
@@ -385,6 +450,7 @@ update public.listings set lat = round(lat::numeric * 200) / 200, lng = round(ln
 -- ---------- Functions the app calls ----------
 
 -- Search listings. Distance is rounded to the nearest half mile; exact location never leaves the database.
+-- Boosted items come first (still within the buyer's filters and distance), except when sorting by lowest price.
 drop function if exists public.find_listings;
 create or replace function public.find_listings(
   p_lat double precision, p_lng double precision,
@@ -401,10 +467,13 @@ create or replace function public.find_listings(
   id uuid, seller_id uuid, title text, price integer, category text, condition text,
   description text, hygiene text[], area text, photos text[], status text, created_at timestamptz,
   distance_miles double precision,
-  seller_name text, seller_area text, seller_languages text[], seller_verified boolean
+  seller_name text, seller_area text, seller_languages text[], seller_verified boolean,
+  boosted boolean,             -- shown to everyone as a "Boosted" label
+  boosted_until timestamptz    -- only filled in for the seller's own items
 ) language sql stable security definer set search_path = public as $$
   with base as (
     select l.*, p.name as s_name, p.area as s_area, p.languages as s_langs, p.id_verified as s_verified,
+      (l.status = 'active' and coalesce(l.boosted_until > now(), false)) as is_boosted,
       3958.8 * 2 * asin(sqrt(
         power(sin(radians(l.lat - p_lat) / 2), 2) +
         cos(radians(p_lat)) * cos(radians(l.lat)) * power(sin(radians(l.lng - p_lng) / 2), 2))) as d
@@ -423,10 +492,12 @@ create or replace function public.find_listings(
   select b.id, b.seller_id, b.title, b.price, b.category, b.condition, b.description, b.hygiene,
     b.area, b.photos, b.status, b.created_at,
     greatest(0.5, round(b.d * 2) / 2) as distance_miles,
-    b.s_name, b.s_area, b.s_langs, b.s_verified
+    b.s_name, b.s_area, b.s_langs, b.s_verified,
+    b.is_boosted, case when b.seller_id = auth.uid() then b.boosted_until end
   from base b
   where p_radius is null or b.d <= p_radius
   order by
+    case when p_seller is null and p_sort <> 'cheap' and b.is_boosted then 0 else 1 end,
     case when p_sort = 'near' then b.d end asc,
     case when p_sort = 'cheap' then b.price end asc,
     b.created_at desc
@@ -451,6 +522,24 @@ grant execute on function public.mark_read to authenticated;
 -- reserved straight away. Otherwise the buyer pays the commission by card (Stripe) and the item is reserved
 -- once Stripe confirms the payment. The buyer pays the item price to the seller in person at pickup.
 -- The seller then marks it as collected (completed) or either side cancels.
+-- The seller's share of the fee (app_settings.reserve_seller_percent) becomes Loftrobin credit for them when the item is
+-- collected or the buyer cancels or does not turn up. If the seller cancels, the buyer gets the whole fee back instead.
+
+-- Internal: add the seller's share of a paid Reserve fee to their Loftrobin credit. Safe to call twice.
+create or replace function public._credit_seller(p_tx uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare t transactions;
+begin
+  select * into t from transactions where id = p_tx;
+  if not found or t.seller_id is null or t.seller_share_pence <= 0 or t.paid_at is null
+     or t.refund_status <> 'none' or t.seller_credited_at is not null then
+    return;
+  end if;
+  insert into credits (user_id, amount_pence, reason, transaction_id, note)
+  values (t.seller_id, t.seller_share_pence, 'reserve_share', t.id, 'Your share of the Reserve fee for "' || t.item_title || '"')
+  on conflict do nothing;
+  update transactions set seller_credited_at = now() where id = t.id;
+end $$;
 
 -- Internal: put a transaction into the "reserved" state and tell both people in their chat.
 create or replace function public._reserve(p_tx uuid)
@@ -475,6 +564,7 @@ declare
   l listings;
   t transactions;
   fee integer;
+  share integer;
   conv uuid;
 begin
   if me is null then raise exception 'Please sign in first.'; end if;
@@ -508,9 +598,13 @@ begin
     insert into conversations (listing_id, buyer_id, seller_id) values (l.id, me, l.seller_id) returning id into conv;
   end if;
 
-  fee := coalesce((select commission_pence from app_settings where id = 1), 0);
-  insert into transactions (listing_id, conversation_id, buyer_id, seller_id, item_title, item_price, commission_pence, status)
-  values (l.id, conv, me, l.seller_id, l.title, l.price, fee, 'awaiting_payment')
+  select coalesce(commission_pence, 0), round(coalesce(commission_pence, 0) * coalesce(reserve_seller_percent, 0) / 100.0)
+    into fee, share from app_settings where id = 1;
+  fee := coalesce(fee, 0);
+  share := coalesce(share, 0);
+  insert into transactions (listing_id, conversation_id, buyer_id, seller_id, item_title, item_price, commission_pence,
+                            seller_share_pence, status)
+  values (l.id, conv, me, l.seller_id, l.title, l.price, fee, share, 'awaiting_payment')
   returning * into t;
   if fee = 0 then t := _reserve(t.id); end if;
   return t;
@@ -526,6 +620,7 @@ begin
   if t.status <> 'reserved' then raise exception 'This reservation is no longer open.'; end if;
   update transactions set status = 'completed', completed_at = now() where id = p_tx returning * into t;
   update listings set status = 'sold' where id = t.listing_id;
+  perform _credit_seller(t.id);
   insert into messages (conversation_id, sender_id, kind, body)
   values (t.conversation_id, t.seller_id, 'system', 'Collected. Thanks for using Loftrobin!');
   return t;
@@ -548,11 +643,15 @@ begin
     refund_status = case when who = 'seller' and paid_at is not null and commission_pence > 0 then 'pending' else refund_status end
   where id = p_tx returning * into t;
   update listings set status = 'active' where id = t.listing_id and status = 'reserved';
+  if who = 'buyer' then perform _credit_seller(t.id); end if;
   if t.reserved_at is not null then
     insert into messages (conversation_id, sender_id, kind, body)
     values (t.conversation_id, auth.uid(), 'system',
       case when who = 'seller' then 'The seller cancelled the reservation.' else 'The buyer cancelled the reservation.' end
-      || case when t.refund_status = 'pending' then ' The Loftrobin fee will be refunded to the buyer''s card.' else '' end);
+      || case when t.refund_status = 'pending' then ' The Loftrobin fee will be refunded to the buyer''s card.'
+              when who = 'buyer' and t.paid_at is not null and t.seller_share_pence > 0
+                then ' The seller gets £' || to_char(t.seller_share_pence / 100.0, 'FM990.00') || ' Loftrobin credit for holding it.'
+              else '' end);
   end if;
   return t;
 end $$;
@@ -600,7 +699,111 @@ returns void language sql security definer set search_path = public as $$
   where stripe_session_id = p_session and status = 'awaiting_payment';
 $$;
 
-revoke execute on function public._reserve, public.attach_checkout, public.confirm_payment,
+-- ---------- Loftrobin credit and Boosts ----------
+
+-- The signed-in person's Loftrobin credit, in pence.
+create or replace function public.my_credit_pence()
+returns integer language sql stable security definer set search_path = public as $$
+  select coalesce(sum(amount_pence), 0)::integer from credits where user_id = auth.uid();
+$$;
+
+-- Internal: push the listing to the top for the boost's days (added on top of any boost still running) and mark it paid.
+create or replace function public._apply_boost(p_boost uuid)
+returns public.boosts language plpgsql security definer set search_path = public as $$
+declare b boosts; ends timestamptz;
+begin
+  select * into b from boosts where id = p_boost for update;
+  update listings set boosted_until = greatest(coalesce(boosted_until, now()), now()) + make_interval(days => b.days)
+  where id = b.listing_id returning boosted_until into ends;
+  update boosts set status = 'paid', paid_at = coalesce(paid_at, now()), ends_at = ends where id = b.id returning * into b;
+  return b;
+end $$;
+
+-- Seller taps Boost. Paid from Loftrobin credit straight away when they have enough;
+-- otherwise returns status 'awaiting_payment' and the app opens card payment.
+create or replace function public.start_boost(p_listing uuid)
+returns public.boosts language plpgsql security definer set search_path = public as $$
+declare
+  me uuid := auth.uid();
+  l listings;
+  st app_settings;
+  b boosts;
+  bal integer;
+begin
+  if me is null then raise exception 'Please sign in first.'; end if;
+  select * into st from app_settings where id = 1;
+  if not coalesce(st.boosts_enabled, false) then raise exception 'Boosts are not available yet.'; end if;
+  if not is_active_user(me) then raise exception 'Your account cannot boost items. Contact Loftrobin for help.'; end if;
+  select * into l from listings where id = p_listing;
+  if not found or l.seller_id <> me then raise exception 'You can only boost your own items.'; end if;
+  if l.hidden or l.status <> 'active' then raise exception 'Only items that are for sale can be boosted.'; end if;
+
+  -- Reuse a card payment started in the last 25 minutes for this item.
+  select * into b from boosts where listing_id = l.id and seller_id = me and status = 'awaiting_payment'
+    and created_at > now() - interval '25 minutes' order by created_at desc limit 1;
+  if found then return b; end if;
+  if (select count(*) from boosts where seller_id = me and created_at > now() - interval '1 day') >= 20 then
+    raise exception 'You have started a lot of boosts today. Please try again tomorrow.';
+  end if;
+
+  perform 1 from profiles where id = me for update;  -- one credit payment at a time
+  bal := my_credit_pence();
+  if bal >= st.boost_price_pence then
+    insert into boosts (listing_id, seller_id, item_title, price_pence, days, paid_with, status)
+    values (l.id, me, l.title, st.boost_price_pence, st.boost_days, 'credit', 'awaiting_payment') returning * into b;
+    insert into credits (user_id, amount_pence, reason, boost_id, note)
+    values (me, -st.boost_price_pence, 'boost', b.id, 'Boost for "' || l.title || '"');
+    return _apply_boost(b.id);
+  end if;
+  insert into boosts (listing_id, seller_id, item_title, price_pence, days, paid_with, status)
+  values (l.id, me, l.title, st.boost_price_pence, st.boost_days, 'card', 'awaiting_payment') returning * into b;
+  return b;
+end $$;
+
+-- Used only by the payment server.
+create or replace function public.attach_boost_checkout(p_boost uuid, p_session text)
+returns void language sql security definer set search_path = public as $$
+  update boosts set stripe_session_id = p_session where id = p_boost and status = 'awaiting_payment';
+$$;
+
+-- Used only by the payment server when Stripe confirms a Boost payment.
+-- Returns the boost; status 'refunded' means the money must go back (the item was sold or deleted meanwhile).
+create or replace function public.confirm_boost_payment(p_session text, p_payment_intent text)
+returns public.boosts language plpgsql security definer set search_path = public as $$
+declare b boosts; l listings;
+begin
+  select * into b from boosts where stripe_session_id = p_session for update;
+  if not found then raise exception 'Unknown checkout session'; end if;
+  if b.paid_at is not null then return b; end if;  -- Stripe can send the same event twice
+  update boosts set paid_at = now(), stripe_payment_intent = p_payment_intent where id = b.id returning * into b;
+  select * into l from listings where id = b.listing_id;
+  if l.id is null or l.status = 'sold' or l.hidden then
+    update boosts set status = 'refunded' where id = b.id returning * into b;
+    return b;
+  end if;
+  return _apply_boost(b.id);
+end $$;
+
+-- Used only by the payment server.
+create or replace function public.set_boost_status(p_boost uuid, p_status text)
+returns void language sql security definer set search_path = public as $$
+  update boosts set status = p_status where id = p_boost;
+$$;
+
+-- Used only by the payment server when a Boost payment page expires unpaid.
+create or replace function public.expire_boost_checkout(p_session text)
+returns void language sql security definer set search_path = public as $$
+  update boosts set status = 'expired' where stripe_session_id = p_session and status = 'awaiting_payment';
+$$;
+
+revoke execute on function public._apply_boost, public.attach_boost_checkout, public.confirm_boost_payment,
+  public.set_boost_status, public.expire_boost_checkout from public, anon, authenticated;
+grant execute on function public.attach_boost_checkout, public.confirm_boost_payment, public.set_boost_status,
+  public.expire_boost_checkout to service_role;
+revoke execute on function public.start_boost, public.my_credit_pence from public, anon;
+grant execute on function public.start_boost, public.my_credit_pence to authenticated;
+
+revoke execute on function public._reserve, public._credit_seller, public.attach_checkout, public.confirm_payment,
   public.set_refund_status, public.expire_checkout from public, anon, authenticated;
 grant execute on function public.attach_checkout, public.confirm_payment, public.set_refund_status,
   public.expire_checkout to service_role;
@@ -611,9 +814,13 @@ grant execute on function public.reserve_listing, public.complete_transaction, p
 -- Transaction records are kept (without the person) because they are financial records.
 create or replace function public.delete_my_account()
 returns void language plpgsql security definer set search_path = public, auth as $$
-declare me uuid := auth.uid();
+declare me uuid := auth.uid(); x uuid;
 begin
   if me is null then raise exception 'not signed in'; end if;
+  -- Reservations where this person is the buyer: the seller keeps their share, as when a buyer cancels.
+  for x in select id from transactions where buyer_id = me and status = 'reserved' loop
+    perform _credit_seller(x);
+  end loop;
   update transactions set status = 'cancelled', cancelled_at = now(),
     cancelled_by = case when seller_id = me then 'seller' else 'buyer' end,
     refund_status = case when seller_id = me and paid_at is not null and commission_pence > 0 then 'pending' else refund_status end
@@ -651,15 +858,35 @@ create or replace view public.admin_open_reports as
   where r.status = 'open'
   order by r.created_at desc;
 
-create or replace view public.admin_commission_by_month as
-  select date_trunc('month', coalesce(completed_at, reserved_at, created_at))::date as month,
-    count(*) filter (where status = 'completed') as items_sold,
-    count(*) filter (where status = 'reserved') as reserved_now,
-    count(*) filter (where status = 'cancelled') as cancelled,
-    sum(commission_pence) filter (where paid_at is not null and refund_status <> 'refunded') / 100.0 as commission_gbp,
-    sum(item_price) filter (where status = 'completed') as items_value_gbp
-  from transactions
-  group by 1 order by 1 desc;
+-- Money in each month. Card amounts are before Stripe's own fee (about 1.5% + 20p per payment for UK cards).
+drop view if exists public.admin_commission_by_month;
+create view public.admin_commission_by_month as
+  with r as (
+    select date_trunc('month', coalesce(completed_at, reserved_at, created_at))::date as month,
+      count(*) filter (where status = 'completed') as items_sold,
+      count(*) filter (where status = 'reserved') as reserved_now,
+      count(*) filter (where status = 'cancelled') as cancelled,
+      coalesce(sum(commission_pence) filter (where paid_at is not null and refund_status <> 'refunded'), 0) as fees,
+      coalesce(sum(seller_share_pence) filter (where seller_credited_at is not null), 0) as shares,
+      sum(item_price) filter (where status = 'completed') as items_value_gbp
+    from transactions group by 1
+  ), b as (
+    select date_trunc('month', paid_at)::date as month, count(*) as boosts,
+      coalesce(sum(price_pence) filter (where paid_with = 'card'), 0) as boost_card,
+      coalesce(sum(price_pence) filter (where paid_with = 'credit'), 0) as boost_credit
+    from boosts where status = 'paid' group by 1
+  )
+  select coalesce(r.month, b.month) as month,
+    coalesce(r.items_sold, 0) as items_sold, coalesce(r.reserved_now, 0) as reserved_now, coalesce(r.cancelled, 0) as cancelled,
+    round(coalesce(r.fees, 0) / 100.0, 2) as reserve_fees_paid_gbp,
+    round(coalesce(r.shares, 0) / 100.0, 2) as seller_credit_given_gbp,
+    coalesce(b.boosts, 0) as boosts,
+    round(coalesce(b.boost_card, 0) / 100.0, 2) as boosts_paid_by_card_gbp,
+    round(coalesce(b.boost_credit, 0) / 100.0, 2) as boosts_paid_with_credit_gbp,
+    round((coalesce(r.fees, 0) + coalesce(b.boost_card, 0)) / 100.0, 2) as card_money_in_gbp,
+    r.items_value_gbp
+  from r full join b on b.month = r.month
+  order by 1 desc;
 
 create or replace view public.admin_id_check_requests as
   select p.id, p.name, u.email, c.phone, c.instagram, p.area, p.languages, p.id_check_requested_at

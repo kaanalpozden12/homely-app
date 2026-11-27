@@ -210,7 +210,7 @@ const TONES = {
   neutral: [C.sunken, C.ink], accent: [C.accentSoft, C.accentDark], warm: [C.warmSoft, C.warm], gold: [C.goldSoft, C.gold], dark: ['rgba(22,32,28,0.82)', '#fff'],
 } as const;
 
-export function Photo({ listing, style, rounded = R.lg, tag = true }: { listing: Pick<Listing, 'photos' | 'category' | 'status'> & { price?: number }; style?: StyleProp<ViewStyle>; rounded?: number; tag?: boolean }) {
+export function Photo({ listing, style, rounded = R.lg, tag = true }: { listing: Pick<Listing, 'photos' | 'category' | 'status'> & { price?: number; boosted?: boolean }; style?: StyleProp<ViewStyle>; rounded?: number; tag?: boolean }) {
   const url = listing.photos?.[0];
   return (
     <View style={[s.photo, { borderRadius: rounded }, style]}>
@@ -224,6 +224,8 @@ export function Photo({ listing, style, rounded = R.lg, tag = true }: { listing:
           {listing.status === 'sold' && <Tag text="Sold" tone="dark" />}
           {listing.status === 'reserved' && <Tag text="Reserved" icon="clock-outline" tone="gold" />}
           {listing.status === 'active' && listing.price === 0 && <Tag text="Free" icon="gift-outline" tone="warm" />}
+          {/* Paid placement must be clearly labelled (UK advertising rules). */}
+          {listing.status === 'active' && listing.boosted && <Tag text="Boosted" icon="rocket-launch-outline" tone="dark" />}
         </View>
       )}
     </View>

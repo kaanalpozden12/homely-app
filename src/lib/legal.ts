@@ -9,4 +9,4 @@ export const CONTACT = CONTACT_EMAIL
   ? `email ${CONTACT_EMAIL}`
   : 'reply to any Loftrobin sign-in email, or use the Report button in the app';
 
-export const LEGAL_UPDATED = '11 November 2026';
+export const LEGAL_UPDATED = '16 November 2026';

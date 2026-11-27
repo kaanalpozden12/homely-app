@@ -4,12 +4,14 @@ import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, Button, Chip, Chips, Empty, Header, Label, ListingCard, ListLink, Verified, s } from '@/components/ui';
-import { deleteMyAccount, findListings } from '@/lib/api';
+import { deleteMyAccount, findListings, myCredit } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { BRAND } from '@/lib/brand';
 import { langCode } from '@/lib/constants';
 import { confirm, notify } from '@/lib/dialog';
 import { monthYear } from '@/lib/format';
 import { useFilters } from '@/lib/location';
+import { fee, sellerShare, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import { C, shadow } from '@/lib/theme';
 import type { Contacts, Listing } from '@/lib/types';
@@ -20,10 +22,13 @@ export default function Profile() {
   const me = session!.user.id;
   const [items, setItems] = useState<Listing[]>([]);
   const [contacts, setContacts] = useState<Contacts | null>(null);
+  const [credit, setCredit] = useState(0);
+  const settings = useSettings();
   const cardW = (Math.min(useWindowDimensions().width, 560) - 44) / 2;
 
   useFocusEffect(useCallback(() => {
     findListings({ lat: filters.lat, lng: filters.lng, seller: me, sort: 'new', includeSold: true }).then(setItems).catch(() => {});
+    myCredit().then(setCredit).catch(() => {});
     supabase.from('profile_contacts').select('*').eq('id', me).maybeSingle().then(({ data }) => setContacts(data as Contacts | null));
   }, [me, filters.lat, filters.lng]));
 
@@ -83,6 +88,18 @@ export default function Profile() {
             <ListLink icon="instagram" label="Instagram" value={contacts?.instagram || 'Not added'} last />
           </View>
           <Text style={[s.hint, { marginTop: 8 }]}>Phone and Instagram are only shared when you tap Share contact in a chat.</Text>
+          {(credit > 0 || settings.boosts_enabled || sellerShare(settings) > 0) && (
+            <>
+              <Label>{BRAND.name} credit</Label>
+              <View style={s.box}>
+                <ListLink icon="wallet-outline" label="Your balance" value={fee(credit)} last />
+              </View>
+              <Text style={[s.hint, { marginTop: 8 }]}>
+                {sellerShare(settings) > 0 ? `When a buyer reserves your item, you get ${fee(sellerShare(settings))} credit for holding it (unless you cancel). ` : ''}
+                {'Spend it on Boosts. Credit cannot be cashed out.'}
+              </Text>
+            </>
+          )}
           <Label>Account</Label>
           <View style={s.box}>
             <ListLink icon="file-document-outline" label="Terms of use" onPress={() => router.push('/terms')} />
